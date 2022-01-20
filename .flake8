@@ -1,0 +1,28 @@
+[flake8]
+ignore =
+    # E203	Whitespace before ':' (because we use black)
+    E203,
+    # W503	Line break occurred before a binary operator (because we use black)
+    W503,
+    # E501	Line too long (because we use black)
+    E501,
+    # S101  Use of assert detected (because it is annoying)
+    S101
+
+exclude =
+    __pycache__,
+    .eggs
+    .git
+    .hg
+    .mypy_cache
+    .tox
+    .venv
+    venv
+    _build
+    buck-out
+    build
+    dist
+
+max-line-length = 89
+
+inline-quotes = "
