@@ -9,6 +9,7 @@ build:
     POETRY_HTTP_BASIC_HAUT_AI_PASSWORD: ${SASUKE_PYTHON_REPO_PUSH_PASSWORD}
   before_script:
     - curl -sSL https://install.python-poetry.org | python -
+    - export PATH="/root/.local/bin:$PATH"
     - poetry config repositories.${SASUKE_PYTHON_REPO_NAME} \
       ${SASUKE_PYTHON_REPO_PUSH_URL}
   script:
