@@ -6,17 +6,8 @@ import pydantic
 import pydantic_vault
 
 
-def include_vault_settings_into_sources(
-    init_settings,
-    env_settings,
-    file_secret_settings,
-) -> tuple:
-    return (
-        init_settings,
-        env_settings,
-        pydantic_vault.vault_config_settings_source,
-        file_secret_settings,
-    )
+def get_vault_settings_source() -> dict[str, ty.Any]:
+    return pydantic_vault.vault_config_settings_source
 
 
 def write_secrets_into_temp_files(
