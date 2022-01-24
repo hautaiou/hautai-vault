@@ -18,8 +18,8 @@ class VaultSettings(pydantic.BaseSettings):
     ) -> ty.Optional[str]:
         if values["enabled"]:
             env = values["env"]
-            value = f"{env}/data"
-        return value  # noqa: R504
+            return f"{env}/data"
+        return value
 
     @property
     def role(self) -> str:
@@ -30,4 +30,5 @@ class VaultSettings(pydantic.BaseSettings):
         return f"{self.env}_k8s"
 
     class Config:
+        env_file: str = ".env"
         env_prefix: str = "vault_"
