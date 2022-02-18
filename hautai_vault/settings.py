@@ -6,9 +6,10 @@ import pydantic
 class VaultSettings(pydantic.BaseSettings):
     service_account_name: str
     env: str = "dev"
-    enabled: bool = True
+    enabled: bool = False
     secrets_path_prefix: ty.Optional[str] = None
     addr: str = "https://vault.infra.haut.ai"
+    token: ty.Optional[pydantic.SecretStr] = None
 
     @pydantic.validator("secrets_path_prefix", pre=True, always=True)
     def set_prefix(

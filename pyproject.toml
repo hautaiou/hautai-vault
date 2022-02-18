@@ -38,6 +38,7 @@ flake8-pie = "^0.15.0"
 flake8-quotes = "^3.3.1"
 flake8-string-format = "^0.3.0"
 flake8-aaa = "^0.12.2"
+ipython = "^8.0.1"
 
 [tool.black]
 line-length = 89
