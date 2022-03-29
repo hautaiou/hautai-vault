@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hautai_vault"
-version = "0.2.0"
+version = "1.0.0"
 description = "A library providing means to interact with Hashicorp Vault"
 authors = ["Vladislav Plisov <v.plisov@haut.ai>"]
 repository = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload"
@@ -10,7 +10,7 @@ packages = [
 exclude = ["**/tests"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 pydantic-vault = "^0.7.1"
 pydantic = {version = "^1.9.0", extras = ["dotenv"]}
 
