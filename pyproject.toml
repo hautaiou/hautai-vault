@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hautai_vault"
-version = "0.2.0"
+version = "1.0.0"
 description = "A library providing means to interact with Hashicorp Vault"
 authors = ["Vladislav Plisov <v.plisov@haut.ai>"]
 repository = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload"
@@ -10,17 +10,17 @@ packages = [
 exclude = ["**/tests"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
 pydantic-vault = "^0.7.1"
 pydantic = {version = "^1.9.0", extras = ["dotenv"]}
 
 [tool.poetry.dev-dependencies]
 isort = "^5.10.1"
-black = "^21.12b0"
+black = "^22.3.0"
 flake8 = "^4.0.1"
-bandit = "^1.7.1"
-flake8-bandit = "^2.1.2"
-flake8-black = "^0.2.3"
+bandit = "^1.7.4"
+flake8-bandit = "^3.0.0"
+flake8-black = "^0.3.2"
 flake8-bugbear = "^22.1.11"
 flake8-comprehensions = "^3.8.0"
 flake8-eradicate = "^1.2.0"
@@ -38,7 +38,7 @@ flake8-pie = "^0.15.0"
 flake8-quotes = "^3.3.1"
 flake8-string-format = "^0.3.0"
 flake8-aaa = "^0.12.2"
-ipython = "^8.0.1"
+ipython = "^8.2.0"
 
 [tool.black]
 line-length = 89

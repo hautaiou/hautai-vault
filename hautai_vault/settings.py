@@ -1,22 +1,20 @@
-import typing as ty
-
 import pydantic
 
 
 class VaultSettings(pydantic.BaseSettings):
     service_account_name: str
     env: str = "dev"
-    enabled: bool = False
-    secrets_path_prefix: ty.Optional[str] = None
+    enabled: bool = True
+    secrets_path_prefix: str | None = None
     addr: str = "https://vault.infra.haut.ai"
-    token: ty.Optional[pydantic.SecretStr] = None
+    token: pydantic.SecretStr | None = None
 
     @pydantic.validator("secrets_path_prefix", pre=True, always=True)
     def set_prefix(
         cls,
-        value: ty.Optional[str],
+        value: str | None,
         values: dict,
-    ) -> ty.Optional[str]:
+    ) -> str | None:
         if values["enabled"]:
             env = values["env"]
             return f"{env}/data"
