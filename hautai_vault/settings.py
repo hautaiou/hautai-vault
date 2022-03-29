@@ -4,7 +4,7 @@ import pydantic
 class VaultSettings(pydantic.BaseSettings):
     service_account_name: str
     env: str = "dev"
-    enabled: bool = False
+    enabled: bool = True
     secrets_path_prefix: str | None = None
     addr: str = "https://vault.infra.haut.ai"
     token: pydantic.SecretStr | None = None
