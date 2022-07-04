@@ -1,3 +1,4 @@
+from functools import cached_property
 import pydantic
 
 
@@ -27,6 +28,15 @@ class VaultSettings(pydantic.BaseSettings):
     @property
     def auth_mount_point(self) -> str:
         return f"{self.env}_k8s"
+
+    def get_secrets(self) -> dict[str, str | dict]:
+        return {
+            "general": f"{self.secrets_path_prefix}/general",
+            "firebase": f"{self.secrets_path_prefix}/firebase",
+        } | {
+            secret: f"{self.secrets_path_prefix}/sasuke/backend/{self.service_account_name}/{secret}"
+            for secret in ("db", "db_new", "admin_google_auth", "stripe")
+        }
 
     class Config:
         env_file: str = ".env"
