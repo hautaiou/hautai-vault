@@ -5,14 +5,14 @@ import pydantic
 
 
 class VaultSettings(pydantic.BaseSettings):
-    service_account_name: str
-    secrets_names: ty.Iterable[str]
+    service_account_name: ty.Optional[str] = None
     env: str = "dev"
     enabled: bool = True
     addr: str = "https://vault.infra.haut.ai"
     token: ty.Union[pydantic.SecretStr, None] = None
-    secrets_path_prefix: ty.Union[str, None] = None
-    secrets_paths: ty.Union[dict[str, str], None] = None
+    secrets_names: ty.Optional[ty.Iterable[str]] = None
+    secrets_path_prefix: ty.Optional[str] = None
+    secrets_paths: ty.Optional[dict[str, str]] = None
     logging_level: int = logging.DEBUG
 
     def _set_secrets_paths(self, secrets_names: ty.Iterable[str]) -> None:
@@ -30,8 +30,10 @@ class VaultSettings(pydantic.BaseSettings):
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+
         logging.basicConfig()
         logging.getLogger("pydantic-vault").setLevel(self.logging_level)
+
         if self.secrets_paths is None:
             self._set_secrets_paths(self.secrets_names)
 
