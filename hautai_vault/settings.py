@@ -5,15 +5,15 @@ import pydantic
 
 
 class VaultSettings(pydantic.BaseSettings):
-    service_account_name: ty.Optional[str] = pydantic.Field(
-        None,
+    env: str
+    service_account_name: str = pydantic.Field(
+        ...,
         env=["service_account_name", "vault_service_account_name"],
     )
-    env: str = "dev"
+    secrets_names: ty.Iterable[str]
     enabled: bool = True
     addr: str = "https://vault.infra.haut.ai"
     token: ty.Union[pydantic.SecretStr, None] = None
-    secrets_names: ty.Optional[ty.Iterable[str]] = None
     secrets_path_prefix: ty.Optional[str] = None
     secrets_paths: ty.Optional[dict[str, str]] = None
     logging_level: int = logging.DEBUG
@@ -47,7 +47,11 @@ class VaultSettings(pydantic.BaseSettings):
         values: dict,
     ) -> ty.Union[str, None]:
         if values["enabled"]:
-            env = values["env"]
+            try:
+                env = values["env"]
+            except KeyError:
+                logging.exception("VAULT_ENV is not specified!")
+                raise
             return f"{env}/data"
         return value
 
