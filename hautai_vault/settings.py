@@ -5,7 +5,10 @@ import pydantic
 
 
 class VaultSettings(pydantic.BaseSettings):
-    service_account_name: ty.Optional[str] = None
+    service_account_name: ty.Optional[str] = pydantic.Field(
+        None,
+        env=["service_account_name", "vault_service_account_name"],
+    )
     env: str = "dev"
     enabled: bool = True
     addr: str = "https://vault.infra.haut.ai"
