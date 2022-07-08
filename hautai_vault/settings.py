@@ -10,11 +10,11 @@ class VaultSettings(pydantic.BaseSettings):
         ...,
         env=["service_account_name", "vault_service_account_name"],
     )
-    secrets_names: ty.Iterable[str]
     enabled: bool = True
     addr: str = "https://vault.infra.haut.ai"
     token: ty.Union[pydantic.SecretStr, None] = None
     secrets_path_prefix: ty.Optional[str] = None
+    secrets_names: ty.Iterable[str] = []
     secrets_paths: ty.Optional[dict[str, str]] = None
     logging_level: int = logging.DEBUG
 
