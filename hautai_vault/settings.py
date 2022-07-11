@@ -1,4 +1,3 @@
-import enum
 import logging
 import typing as ty
 
@@ -6,33 +5,38 @@ import pydantic
 
 
 class VaultSettings(pydantic.BaseSettings):
-    service_account_name: str
-    secrets_names: type[enum.Enum]
-    env: str = "dev"
+    env: str
+    service_account_name: str = pydantic.Field(
+        ...,
+        env=["service_account_name", "vault_service_account_name"],
+    )
     enabled: bool = True
     addr: str = "https://vault.infra.haut.ai"
     token: ty.Union[pydantic.SecretStr, None] = None
-    secrets_path_prefix: ty.Union[str, None] = None
-    secrets_paths: ty.Union[dict[str, str], None] = None
+    secrets_path_prefix: ty.Optional[str] = None
+    secrets_names: ty.Iterable[str] = []
+    secrets_paths: ty.Optional[dict[str, str]] = None
     logging_level: int = logging.DEBUG
 
-    def _set_secrets_paths(self, secrets_names: type[enum.Enum]) -> None:
+    def _set_secrets_paths(self, secrets_names: ty.Iterable[str]) -> None:
         self.secrets_paths = {
             "general": f"{self.secrets_path_prefix}/general",
             "firebase": f"{self.secrets_path_prefix}/firebase",
         } | {
-            secret.value: "{0}/sasuke/backend/{1}/{2}".format(
+            secret: "{0}/sasuke/backend/{1}/{2}".format(
                 self.secrets_path_prefix,
                 self.service_account_name,
-                secret.value,
+                secret,
             )
             for secret in secrets_names
         }
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
+
         logging.basicConfig()
         logging.getLogger("pydantic-vault").setLevel(self.logging_level)
+
         if self.secrets_paths is None:
             self._set_secrets_paths(self.secrets_names)
 
@@ -43,7 +47,11 @@ class VaultSettings(pydantic.BaseSettings):
         values: dict,
     ) -> ty.Union[str, None]:
         if values["enabled"]:
-            env = values["env"]
+            try:
+                env = values["env"]
+            except KeyError:
+                logging.exception("VAULT_ENV is not specified!")
+                raise
             return f"{env}/data"
         return value
 
