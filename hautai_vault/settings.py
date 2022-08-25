@@ -50,8 +50,7 @@ class VaultSettings(pydantic.BaseSettings):
             try:
                 env = values["env"]
             except KeyError:
-                logging.exception("VAULT_ENV is not specified!")
-                raise
+                exit("VAULT_ENV environment variable is not specified!")
             return f"{env}/data"
         return value
 
