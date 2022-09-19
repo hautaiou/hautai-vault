@@ -1,0 +1,71 @@
+"""Client setup."""
+
+import typing as ty
+
+from hvac import Client as HvacClient
+from hvac.api.auth_methods import JWT, Kubernetes
+import pydantic
+import requests
+
+from .logger import logger
+
+if ty.TYPE_CHECKING:
+    from .settings import VaultSettings
+
+
+class AuthMethodParams(pydantic.BaseModel):
+    role: str
+    jwt: pydantic.SecretStr
+    use_token: bool = True
+
+
+class JWTAuthMethodParams(AuthMethodParams):
+    path: ty.Optional[str] = None
+
+
+class KubernetesAuthMethodParams(AuthMethodParams):
+    mount_point: str
+
+
+class VaultClient(HvacClient):
+    """Interacts with Vault API.
+
+    Extends the base `hvac.Client` class.
+
+    Methods:
+        auth -- login via one of the auth methods
+    """
+
+    def auth(self, settings: "VaultSettings") -> requests.Response:
+        """Login via one of the auth methods.
+
+        Currently, there are only two methods supported. Depending on whether
+        `settings.jwt` is provided, either the JWT or the Kubernetes methods
+        are used.
+
+        Arguments:
+            settings -- `VaultSettings` instance
+
+        Returns:
+            An HTTP response.
+        """
+        if settings.jwt is not None:
+            logger.debug("Using the JWT auth method...")
+            auth_params = JWTAuthMethodParams(
+                role=settings.role,
+                jwt=settings.jwt.get_secret_value(),
+            )
+            return JWT(self.adapter).jwt_login(**auth_params)
+
+        logger.debug("Using the Kubernetes auth method...")
+        auth_params = KubernetesAuthMethodParams(
+            role=settings.role,
+            jwt=self._get_k8s_jwt(),
+            mount_point=settings.k8s_auth_mount_point,
+        )
+        return Kubernetes(self.adapter).login(**auth_params)
+
+    def _get_k8s_jwt(self) -> pydantic.SecretStr:
+        with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
+            logger.debug("Found a token for a Kubernetes service account.")
+            return pydantic.SecretStr(f.read().strip())
