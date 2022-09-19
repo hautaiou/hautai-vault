@@ -53,7 +53,7 @@ class VaultClient(HvacClient):
             logger.debug("Using the JWT auth method...")
             auth_params = JWTAuthMethodParams(
                 role=settings.role,
-                jwt=settings.jwt.get_secret_value(),
+                jwt=settings.jwt,
             )
             return JWT(self.adapter).jwt_login(**auth_params.dict())
 
@@ -65,7 +65,7 @@ class VaultClient(HvacClient):
         )
         return Kubernetes(self.adapter).login(**auth_params.dict())
 
-    def _get_k8s_jwt(self) -> pydantic.SecretStr:
+    def _get_k8s_jwt(self) -> str:
         with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
             logger.debug("Found a token for a Kubernetes service account.")
-            return pydantic.SecretStr(f.read().strip())
+            return f.read().strip()
