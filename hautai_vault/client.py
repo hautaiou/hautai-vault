@@ -2,10 +2,10 @@
 
 import typing as ty
 
-from hvac import Client as HvacClient
-from hvac.api.auth_methods import JWT, Kubernetes
 import pydantic
 import requests
+from hvac import Client as HvacClient
+from hvac.api.auth_methods import JWT, Kubernetes
 
 from .logger import logger
 
