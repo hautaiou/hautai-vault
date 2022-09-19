@@ -15,7 +15,7 @@ if ty.TYPE_CHECKING:
 
 class AuthMethodParams(pydantic.BaseModel):
     role: str
-    jwt: pydantic.SecretStr
+    jwt: str
     use_token: bool = True
 
 
