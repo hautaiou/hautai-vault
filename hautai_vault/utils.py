@@ -40,7 +40,7 @@ def write_secrets_into_temp_files(
 
 
 def vault_settings_source(settings: BaseSettings) -> JSONDict:
-    vault_settings: VaultSettings = getattr(settings.__config__, "vault_settings")
+    vault_settings: VaultSettings = settings.__config__.vault_settings
     client = _setup_client(vault_settings)
     return _setup_fields(settings, client)
 
@@ -59,11 +59,9 @@ def _extract_auth_token(vault_settings: VaultSettings) -> ty.Optional[SecretStr]
         logger.debug("Found Vault Token in environment variables")
         return vault_settings.token
 
-    with suppress(FileNotFoundError):
-        with open(Path.home() / ".vault-token") as f:
-            token = SecretStr(f.read().strip())
-            logger.debug("Vault auth token is taken from '~/.vault-token' file")
-            return token
+    with suppress(FileNotFoundError), open(Path.home() / ".vault-token") as f:
+        logger.debug("Vault auth token is taken from '~/.vault-token' file")
+        return SecretStr(f.read().strip())
 
     return None
 
@@ -82,14 +80,7 @@ def _setup_fields(settings: BaseSettings, client: VaultClient) -> JSONDict:
             continue
 
         secret_key = _get_secret_key(field)
-
-        secret_data = _get_secret_data(resp, secret_key, secret_path, field)
-        if secret_data is None:
-            logger.debug("Applying the default for %s field...", field.name)
-            continue
-
-        if field.is_complex() and not isinstance(secret_data, (dict, list)):
-            secret_data = _parse_secret_data(settings, secret_data, secret_key)
+        secret_data = _get_secret_data(settings, resp, secret_key, secret_path, field)
 
         vault_fields[field.alias] = secret_data
         logger.debug("Field %s is set to %s", field.name, secret_data)
@@ -100,7 +91,9 @@ def _get_secret_path(field: ModelField) -> ty.Optional[str]:
     return field.field_info.extra.get("vault_secret_path")
 
 
-def _get_response(client: VaultClient, secret_path: str, field: ModelField) -> ty.Optional[JSONDict]:
+def _get_response(
+    client: VaultClient, secret_path: str, field: ModelField
+) -> ty.Optional[JSONDict]:
     try:
         return client.read(secret_path)["data"]
     except VaultError:
@@ -118,24 +111,25 @@ def _get_secret_key(field: ModelField) -> ty.Optional[str]:
     return field.field_info.extra.get("vault_secret_key")
 
 
-def _get_secret_data(resp: JSONDict, secret_key: ty.Optional[str], secret_path: str, field: ModelField) -> ty.Any:
-    if secret_key is None:
-        return resp.get("data", resp)
+def _get_secret_data(
+    settings: BaseSettings,
+    resp: JSONDict,
+    secret_key: ty.Optional[str],
+    secret_path: str,
+    field: ModelField,
+) -> ty.Any:
+    secret_data = resp.get("data", resp)
+    if secret_key is not None:
+        secret_path = ":".join((secret_path, secret_key))
+        try:
+            secret_data = secret_data[secret_key]
+        except KeyError:
+            logger.error("Wrong key for a secret! Full path: %s", secret_path)
+
+    if not field.is_complex() or isinstance(secret_data, (dict, list)):
+        return secret_data
 
     try:
-        return resp.get("data", resp)[secret_key]
-    except KeyError:
-        logger.error("Could not get %s key from %s", secret_key, secret_path)
-        if field.required:
-            raise ValueError("Couldn't set a value for a required field %s", field.name)
-
-    return None
-
-
-def _parse_secret_data(settings: BaseSettings, secret_data: ty.Any, secret_key: str) -> ty.Any:
-    try:
-        return settings.__config__.json_loads(secret_data)  # type: ignore
+        return settings.__config__.json_loads(secret_data)
     except ValueError as e:
-        if secret_key is not None:
-            secret_path = ":".join((secret_path, secret_key))
         raise SettingsError(f"JSON parsing error for {secret_path}") from e
