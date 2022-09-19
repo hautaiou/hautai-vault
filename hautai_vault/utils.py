@@ -48,8 +48,8 @@ def vault_settings_source(settings: BaseSettings) -> JSONDict:
 def _setup_client(vault_settings: VaultSettings) -> VaultClient:
     auth_token = _extract_auth_token(vault_settings)
     if auth_token is not None:
-        return VaultClient(token=auth_token.get_secret_value())
-    client = VaultClient()
+        return VaultClient(token=auth_token.get_secret_value(), url=vault_settings.addr)
+    client = VaultClient(url=vault_settings.addr)
     client.auth(vault_settings)
     return client
 
