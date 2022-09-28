@@ -1,5 +1,12 @@
 """Client setup."""
 
+__all__ = [
+    "AuthMethodParams",
+    "JWTAuthMethodParams",
+    "KubernetesAuthMethodParams",
+    "VaultClient",
+]
+
 import typing as ty
 
 import pydantic
