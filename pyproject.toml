@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hautai_vault"
-version = "2.0.4"
+version = "2.1.0"
 description = "A library providing means to interact with Hashicorp Vault"
 authors = ["Vladislav Plisov <v.plisov@haut.ai>"]
 repository = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload"
