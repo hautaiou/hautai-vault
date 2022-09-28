@@ -66,6 +66,13 @@ class VaultClient(HvacClient):
         return Kubernetes(self.adapter).login(**auth_params.dict())
 
     def _get_k8s_jwt(self) -> str:
-        with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
-            logger.debug("Found a token for a Kubernetes service account.")
-            return f.read().strip()
+        token_abs_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        try:
+            with open(token_abs_path) as f:
+                return f.read().strip()
+        except FileNotFoundError:
+            logger.error(
+                "K8s service account token is not found! Expected path: %s",
+                token_abs_path,
+            )
+            raise

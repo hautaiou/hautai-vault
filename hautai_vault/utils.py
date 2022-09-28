@@ -56,7 +56,7 @@ def _setup_client(vault_settings: VaultSettings) -> VaultClient:
 
 def _extract_auth_token(vault_settings: VaultSettings) -> ty.Optional[SecretStr]:
     if vault_settings.token:
-        logger.debug("Found Vault Token in environment variables")
+        logger.debug("Found Vault auth token in environment variables")
         return vault_settings.token
 
     with suppress(FileNotFoundError), open(Path.home() / ".vault-token") as f:
@@ -76,14 +76,14 @@ def _setup_fields(settings: BaseSettings, client: VaultClient) -> JSONDict:
 
         resp = _get_response(client, secret_path, field)
         if resp is None:
-            logger.debug("Applying the default for %s field...", field.name)
+            logger.info("Applying the default for %s field...", field.name)
             continue
 
         secret_key = _get_secret_key(field)
         secret_data = _get_secret_data(settings, resp, secret_key, secret_path, field)
 
         vault_fields[field.alias] = secret_data
-        logger.debug("Field %s is set to %s", field.name, secret_data)
+        logger.info("Field %s is set to a corresponding Vault secret", field.name)
     return vault_fields
 
 
