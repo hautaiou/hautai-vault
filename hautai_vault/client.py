@@ -19,6 +19,8 @@ from .logger import logger
 if ty.TYPE_CHECKING:
     from .settings import VaultSettings
 
+TOKEN_ABS_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"  # noqa: S105
+
 
 class AuthMethodParams(pydantic.BaseModel):
     """Base parameters model for auth methods using JWTs.
@@ -30,6 +32,7 @@ class AuthMethodParams(pydantic.BaseModel):
 
         use_token -- set `token` attr for an adapter in use (default: {True})
     """
+
     role: str
     jwt: str
     use_token: bool = True
@@ -43,6 +46,7 @@ class JWTAuthMethodParams(AuthMethodParams):
     Fields:
         path -- auth method/backend mount point (default: {None})
     """
+
     path: ty.Optional[str] = None
 
 
@@ -54,6 +58,7 @@ class KubernetesAuthMethodParams(AuthMethodParams):
     Fields:
         mount_point -- auth method mount point
     """
+
     mount_point: str
 
 
@@ -96,13 +101,12 @@ class VaultClient(HvacClient):
         return Kubernetes(self.adapter).login(**auth_params.dict())
 
     def _get_k8s_jwt(self) -> str:
-        token_abs_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
         try:
-            with open(token_abs_path) as f:
+            with open(TOKEN_ABS_PATH) as f:
                 return f.read().strip()
         except FileNotFoundError:
             logger.error(
                 "K8s service account token is not found! Expected path: %s",
-                token_abs_path,
+                TOKEN_ABS_PATH,
             )
             raise

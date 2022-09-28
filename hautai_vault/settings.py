@@ -45,6 +45,7 @@ class VaultSettings(pydantic.BaseSettings):
 
         k8s_auth_mount_point -- mount point for K8s auth method
     """
+
     env: str
     user_login: str = pydantic.Field(
         ...,
