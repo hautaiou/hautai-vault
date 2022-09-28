@@ -8,6 +8,8 @@ from pathlib import PurePosixPath
 
 import pydantic
 
+from .logger import logger
+
 
 class VaultSettings(pydantic.BaseSettings):
     env: str
@@ -27,7 +29,7 @@ class VaultSettings(pydantic.BaseSettings):
         super().__init__(**kwargs)
 
         logging.basicConfig()
-        logging.getLogger("pydantic-vault").setLevel(self.logging_level)
+        logging.getLogger(logger.name).setLevel(self.logging_level)
 
         self._set_secrets_paths()
 
