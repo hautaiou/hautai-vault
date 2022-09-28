@@ -23,6 +23,14 @@ JSONDict = dict[str, ty.Any]
 def write_secrets_into_temp_files(
     secrets: ty.Iterable[tuple[str, SecretStr]],
 ) -> dict[str, tempfile.NamedTemporaryFile]:
+    """Write each secret in an iterable into a temporary file.
+
+    Arguments:
+        secrets -- iterable of secrets' names and data tuples
+
+    Returns:
+        a dictionary with secrets' names as keys and tempfiles as values
+    """
     temp_files = {}
     for key, value in secrets:
         secret = value.get_secret_value()
@@ -40,6 +48,14 @@ def write_secrets_into_temp_files(
 
 
 def vault_settings_source(settings: BaseSettings) -> JSONDict:
+    """Enable Vault as a source for setting up an application.
+
+    Arguments:
+        settings -- application settings
+
+    Returns:
+        a dictionary of fields which values are set via Vault.
+    """
     vault_settings: VaultSettings = settings.__config__.vault_settings
     client = _setup_client(vault_settings)
     return _setup_fields(settings, client)

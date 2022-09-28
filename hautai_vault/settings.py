@@ -12,6 +12,40 @@ from .logger import logger
 
 
 class VaultSettings(pydantic.BaseSettings):
+    """Provides the nessesary means to set up and use Hashicorp Vault.
+
+    Fields:
+        env -- only the secrets from a specific environment shall be awailable
+
+        user_login -- user ID that the Vault client should auth against
+
+        enabled -- can the Vault be used or not (default: {True})
+
+        addr -- URL for the Vault instance being addressed (
+            default: {"https://vault.infra.haut.ai"}
+        )
+
+        token -- Vault token for bypassing auth methods (default: {None})
+
+        jwt -- JSON Web Token for JWT auth method (default: {None})
+
+        secrets_path_prefix -- secrets engine backend's location prefix (
+            default: {None}
+        ). If None, results from prepending the current `env` value to the
+        '/data' string literal, e.g.: "dev/data".
+
+        secrets -- aliases to secrets' paths mapping (
+            default: {"general": None}
+        ). If None is assigned as an item's value instead of path to a secret,
+        then an alias name will be used as a path.
+
+        logging_level -- severity level of logging (default: {`logging.DEBUG`})
+
+    Properties:
+        role -- Vault auth role
+
+        k8s_auth_mount_point -- mount point for K8s auth method
+    """
     env: str
     user_login: str = pydantic.Field(
         ...,
@@ -26,6 +60,7 @@ class VaultSettings(pydantic.BaseSettings):
     logging_level: int = logging.DEBUG
 
     def __init__(self, **kwargs) -> None:
+        """Instantiate VaultSettings, set up logging and secrets."""
         super().__init__(**kwargs)
 
         logging.basicConfig()

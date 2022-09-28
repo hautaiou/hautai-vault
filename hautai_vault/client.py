@@ -21,16 +21,39 @@ if ty.TYPE_CHECKING:
 
 
 class AuthMethodParams(pydantic.BaseModel):
+    """Base parameters model for auth methods using JWTs.
+
+    Fields:
+        role -- Vault auth role
+
+        jwt -- JSON Web Token
+
+        use_token -- set `token` attr for an adapter in use (default: {True})
+    """
     role: str
     jwt: str
     use_token: bool = True
 
 
 class JWTAuthMethodParams(AuthMethodParams):
+    """JWT-specific auth parameters.
+
+    Extends `AuthMethodParams`.
+
+    Fields:
+        path -- auth method/backend mount point (default: {None})
+    """
     path: ty.Optional[str] = None
 
 
 class KubernetesAuthMethodParams(AuthMethodParams):
+    """K8s-specific auth parameters.
+
+    Extends `AuthMethodParams`.
+
+    Fields:
+        mount_point -- auth method mount point
+    """
     mount_point: str
 
 
