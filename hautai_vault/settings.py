@@ -4,7 +4,6 @@ __all__ = ["VaultSettings"]
 
 import logging
 import typing as ty
-from pathlib import PurePosixPath
 
 import pydantic
 
@@ -56,7 +55,7 @@ class VaultSettings(pydantic.BaseSettings):
     token: ty.Union[pydantic.SecretStr, None] = None
     jwt: ty.Union[pydantic.SecretStr, None] = None
     secrets_path_prefix: ty.Optional[str] = None
-    secrets: dict[str, ty.Optional[PurePosixPath]] = {"general": None}
+    secrets: dict[str, ty.Optional[str]] = {"general": None}
     logging_level: int = logging.DEBUG
 
     def __init__(self, **kwargs) -> None:
@@ -70,10 +69,8 @@ class VaultSettings(pydantic.BaseSettings):
 
     def _set_secrets_paths(self) -> None:
         for key, value in self.secrets.items():
-            if value is None:
-                self.secrets[key] = f"{self.secrets_path_prefix}/{key}"
-                continue
-            self.secrets[key] = f"{self.secrets_path_prefix}/{value.as_posix()}"
+            path = key if value is None else value
+            self.secrets[key] = f"{self.secrets_path_prefix}/{path.strip('/')}"
 
     @pydantic.validator("secrets_path_prefix", pre=True, always=True)
     def _set_secrets_path_prefix(
@@ -87,7 +84,7 @@ class VaultSettings(pydantic.BaseSettings):
             except KeyError:
                 exit("VAULT_ENV environment variable is not specified!")
             return f"{env}/data"
-        return value
+        return value.strip("/")
 
     @property
     def role(self) -> str:
