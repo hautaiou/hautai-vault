@@ -53,8 +53,8 @@ class VaultSettings(pydantic.BaseSettings):
     )
     enabled: bool = True
     addr: str = "https://vault.infra.haut.ai"
-    token: ty.Union[pydantic.SecretStr, None] = None
-    jwt: ty.Union[pydantic.SecretStr, None] = None
+    token: ty.Optional[pydantic.SecretStr] = None
+    jwt: ty.Optional[pydantic.SecretStr] = None
     secrets_path_prefix: ty.Optional[str] = None
     secrets: dict[str, ty.Optional[str]] = {"general": None}
     logging_level: int = logging.DEBUG
@@ -76,16 +76,16 @@ class VaultSettings(pydantic.BaseSettings):
     @pydantic.validator("secrets_path_prefix", pre=True, always=True)
     def _set_secrets_path_prefix(
         cls,
-        value: ty.Union[str, None],
+        value: ty.Optional[str],
         values: dict,
-    ) -> ty.Union[str, None]:
+    ) -> ty.Optional[str]:
         if values["enabled"] and value is None:
             try:
                 env = values["env"]
             except KeyError:
                 exit("VAULT_ENV environment variable is not specified!")
             return f"{env}/data"
-        return value.strip("/")
+        return value if value is None else value.strip("/")
 
     @property
     def role(self) -> str:
