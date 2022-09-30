@@ -1,5 +1,12 @@
 """Client setup."""
 
+__all__ = [
+    "AuthMethodParams",
+    "JWTAuthMethodParams",
+    "KubernetesAuthMethodParams",
+    "VaultClient",
+]
+
 import typing as ty
 
 import pydantic
@@ -12,18 +19,46 @@ from .logger import logger
 if ty.TYPE_CHECKING:
     from .settings import VaultSettings
 
+TOKEN_ABS_PATH = "/var/run/secrets/kubernetes.io/serviceaccount/token"  # noqa: S105
+
 
 class AuthMethodParams(pydantic.BaseModel):
+    """Base parameters model for auth methods using JWTs.
+
+    Fields:
+        role -- Vault auth role
+
+        jwt -- JSON Web Token
+
+        use_token -- set `token` attr for an adapter in use (default: {True})
+    """
+
     role: str
     jwt: str
     use_token: bool = True
 
 
 class JWTAuthMethodParams(AuthMethodParams):
+    """JWT-specific auth parameters.
+
+    Extends `AuthMethodParams`.
+
+    Fields:
+        path -- auth method/backend mount point (default: {None})
+    """
+
     path: ty.Optional[str] = None
 
 
 class KubernetesAuthMethodParams(AuthMethodParams):
+    """K8s-specific auth parameters.
+
+    Extends `AuthMethodParams`.
+
+    Fields:
+        mount_point -- auth method mount point
+    """
+
     mount_point: str
 
 
@@ -66,6 +101,12 @@ class VaultClient(HvacClient):
         return Kubernetes(self.adapter).login(**auth_params.dict())
 
     def _get_k8s_jwt(self) -> str:
-        with open("/var/run/secrets/kubernetes.io/serviceaccount/token") as f:
-            logger.debug("Found a token for a Kubernetes service account.")
-            return f.read().strip()
+        try:
+            with open(TOKEN_ABS_PATH) as f:
+                return f.read().strip()
+        except FileNotFoundError:
+            logger.error(
+                "K8s service account token is not found! Expected path: %s",
+                TOKEN_ABS_PATH,
+            )
+            raise

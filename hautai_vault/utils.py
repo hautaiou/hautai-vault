@@ -23,6 +23,14 @@ JSONDict = dict[str, ty.Any]
 def write_secrets_into_temp_files(
     secrets: ty.Iterable[tuple[str, SecretStr]],
 ) -> dict[str, tempfile.NamedTemporaryFile]:
+    """Write each secret in an iterable into a temporary file.
+
+    Arguments:
+        secrets -- iterable of secrets' names and data tuples
+
+    Returns:
+        a dictionary with secrets' names as keys and tempfiles as values
+    """
     temp_files = {}
     for key, value in secrets:
         secret = value.get_secret_value()
@@ -40,6 +48,14 @@ def write_secrets_into_temp_files(
 
 
 def vault_settings_source(settings: BaseSettings) -> JSONDict:
+    """Enable Vault as a source for setting up an application.
+
+    Arguments:
+        settings -- application settings
+
+    Returns:
+        a dictionary of fields which values are set via Vault.
+    """
     vault_settings: VaultSettings = settings.__config__.vault_settings
     client = _setup_client(vault_settings)
     return _setup_fields(settings, client)
@@ -56,7 +72,7 @@ def _setup_client(vault_settings: VaultSettings) -> VaultClient:
 
 def _extract_auth_token(vault_settings: VaultSettings) -> ty.Optional[SecretStr]:
     if vault_settings.token:
-        logger.debug("Found Vault Token in environment variables")
+        logger.debug("Found Vault auth token in environment variables")
         return vault_settings.token
 
     with suppress(FileNotFoundError), open(Path.home() / ".vault-token") as f:
@@ -76,14 +92,14 @@ def _setup_fields(settings: BaseSettings, client: VaultClient) -> JSONDict:
 
         resp = _get_response(client, secret_path, field)
         if resp is None:
-            logger.debug("Applying the default for %s field...", field.name)
+            logger.info("Applying the default for %s field...", field.name)
             continue
 
         secret_key = _get_secret_key(field)
         secret_data = _get_secret_data(settings, resp, secret_key, secret_path, field)
 
         vault_fields[field.alias] = secret_data
-        logger.debug("Field %s is set to %s", field.name, secret_data)
+        logger.info("Field %s is set to a corresponding Vault secret", field.name)
     return vault_fields
 
 
@@ -125,6 +141,8 @@ def _get_secret_data(
             secret_data = secret_data[secret_key]
         except KeyError:
             logger.error("Wrong key for a secret! Full path: %s", secret_path)
+            logger.info("Applying the default for %s field...", field.name)
+            return field.get_default()
 
     if not field.is_complex() or isinstance(secret_data, (dict, list)):
         return secret_data
