@@ -141,6 +141,8 @@ def _get_secret_data(
             secret_data = secret_data[secret_key]
         except KeyError:
             logger.error("Wrong key for a secret! Full path: %s", secret_path)
+            logger.info("Applying the default for %s field...", field.name)
+            return field.get_default()
 
     if not field.is_complex() or isinstance(secret_data, (dict, list)):
         return secret_data
