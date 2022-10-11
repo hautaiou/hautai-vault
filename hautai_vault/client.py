@@ -34,7 +34,7 @@ class AuthMethodParams(pydantic.BaseModel):
     """
 
     role: str
-    jwt: str | bytes
+    jwt: ty.Union[str, bytes]
     use_token: bool = True
 
 
