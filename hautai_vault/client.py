@@ -34,7 +34,7 @@ class AuthMethodParams(pydantic.BaseModel):
     """
 
     role: str
-    jwt: ty.Any
+    jwt: str
     use_token: bool = True
 
 
@@ -86,10 +86,9 @@ class VaultClient(HvacClient):
         """
         if settings.jwt is not None:
             logger.debug("Using the JWT auth method...")
-            logger.debug("JWT value: %s", settings.jwt)
             auth_params = JWTAuthMethodParams(
                 role=settings.role,
-                jwt=settings.jwt,
+                jwt=settings.jwt.get_secret_value(),
             )
             return JWT(self.adapter).jwt_login(**auth_params.dict())
 
