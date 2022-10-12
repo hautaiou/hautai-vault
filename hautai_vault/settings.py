@@ -28,6 +28,8 @@ class VaultSettings(pydantic.BaseSettings):
 
         jwt -- JSON Web Token for JWT auth method (default: {None})
 
+        jwt_auth_path -- JWT auth method/backend mount point (default: {None})
+
         secrets_path_prefix -- secrets engine backend's location prefix (
             default: {None}
         ). If None, results from prepending the current `env` value to the
@@ -55,6 +57,7 @@ class VaultSettings(pydantic.BaseSettings):
     addr: str = "https://vault.infra.haut.ai"
     token: ty.Optional[pydantic.SecretStr] = None
     jwt: ty.Optional[pydantic.SecretStr] = None
+    jwt_auth_path: ty.Optional[str] = None
     secrets_path_prefix: ty.Optional[str] = None
     secrets: dict[str, ty.Optional[str]] = {"general": None}
     logging_level: int = logging.DEBUG
