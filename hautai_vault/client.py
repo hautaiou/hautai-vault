@@ -89,6 +89,7 @@ class VaultClient(HvacClient):
             auth_params = JWTAuthMethodParams(
                 role=settings.role,
                 jwt=settings.jwt.get_secret_value(),
+                path=settings.jwt_auth_path,
             )
             return JWT(self.adapter).jwt_login(**auth_params.dict())
 
