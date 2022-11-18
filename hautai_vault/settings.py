@@ -48,8 +48,8 @@ class VaultSettings(pydantic.BaseSettings):
     addr: str = "https://vault.infra.haut.ai"
 
     env: ty.Optional[str] = None
-    user_login: str = pydantic.Field(
-        ...,
+    user_login: ty.Optional[str] = pydantic.Field(
+        None,
         env=["vault_user_login", "service_account_name"],
     )
 
