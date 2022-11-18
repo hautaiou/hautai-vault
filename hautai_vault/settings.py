@@ -14,15 +14,17 @@ class VaultSettings(pydantic.BaseSettings):
     """Provides the nessesary means to set up and use Hashicorp Vault.
 
     Fields:
-        user_login -- user ID that the Vault client should auth against
-
         enabled -- can the Vault be used or not (default: {True})
 
         addr -- URL for the Vault instance being addressed (
             default: {"https://vault.infra.haut.ai"}
         )
 
-        env -- current K8s env. Usually used by our services (default: {None})
+        env -- current K8s env for backend services (default: {None})
+
+        user_login -- used as a fallback auth role together with env (
+            default: {None}
+        )
 
         token -- Vault token for bypassing auth methods (default: {None})
 
@@ -42,13 +44,14 @@ class VaultSettings(pydantic.BaseSettings):
         logging_level -- severity level of logging (default: {`logging.DEBUG`})
     """
 
+    enabled: bool = True
+    addr: str = "https://vault.infra.haut.ai"
+
+    env: ty.Optional[str] = None
     user_login: str = pydantic.Field(
         ...,
         env=["vault_user_login", "service_account_name"],
     )
-    enabled: bool = True
-    addr: str = "https://vault.infra.haut.ai"
-    env: ty.Optional[str] = None
 
     token: ty.Optional[pydantic.SecretStr] = None
     jwt: ty.Optional[pydantic.SecretStr] = None
@@ -91,9 +94,12 @@ class VaultSettings(pydantic.BaseSettings):
     ) -> ty.Union[str, ty.NoReturn]:
         if value is not None:
             return value
-        if values["env"] is not None:
+        if values["env"] is not None and values["user_login"] is not None:
             return f"{values['env']}-{values['user_login']}"
-        return exit("Either VAULT_AUTH_ROLE or VAULT_ENV envs must be set!")
+        return exit(
+            "Either VAULT_AUTH_ROLE or both VAULT_ENV and VAULT_USER_LOGIN "
+            "envs must be set!"
+        )
 
     @pydantic.validator("auth_path", pre=True, always=True)
     def _set_auth_path(
