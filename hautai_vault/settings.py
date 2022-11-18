@@ -83,25 +83,27 @@ class VaultSettings(pydantic.BaseSettings):
             return value.strip("/")
         if values["env"] is not None:
             return values["env"]
-        exit("Either VAULT_SECRETS_ENGINE or VAULT_ENV envs must be set!")
+        return exit("Either VAULT_SECRETS_ENGINE or VAULT_ENV envs must be set!")
 
     @pydantic.validator("auth_role", pre=True, always=True)
-    def _set_auth_role(cls, value: ty.Optional[str], values: dict[str, ty.Any]) -> str:
+    def _set_auth_role(
+        cls, value: ty.Optional[str], values: dict[str, ty.Any]
+    ) -> ty.Union[str, ty.NoReturn]:
         if value is not None:
             return value
         if values["env"] is not None:
             return f"{values['env']}-{values['user_login']}"
-        exit("Either VAULT_AUTH_ROLE or VAULT_ENV envs must be set!")
+        return exit("Either VAULT_AUTH_ROLE or VAULT_ENV envs must be set!")
 
     @pydantic.validator("auth_path", pre=True, always=True)
     def _set_auth_path(
         cls, value: ty.Optional[str], values: dict[str, ty.Any]
-    ) -> str:
+    ) -> ty.Union[str, ty.NoReturn]:
         if value is not None:
             return value.strip("/")
         if values["env"] is not None:
             return f"{values['env']}_k8s"
-        exit("Either VAULT_AUTH_PATH or VAULT_ENV envs must be set!")
+        return exit("Either VAULT_AUTH_PATH or VAULT_ENV envs must be set!")
 
     class Config:
         env_file: str = ".env"
