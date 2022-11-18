@@ -26,14 +26,16 @@ class VaultSettings(pydantic.BaseSettings):
 
         jwt -- JSON Web Token for JWT auth method (default: {None})
 
-        auth_role -- Vault auth role (default: {None})
-
         secrets -- aliases to secrets' paths mapping (
             default: {"general": None}
         ). If None is assigned as an item's value instead of path to a secret,
         then an alias name will be used as a path.
 
         secrets_mount_point -- KV storage mount point (default: {None})
+
+        auth_role -- Vault auth role (default: {None})
+
+        auth_mount_point -- auth method mount point (default: {None})
 
         logging_level -- severity level of logging (default: {`logging.DEBUG`})
 
@@ -53,10 +55,11 @@ class VaultSettings(pydantic.BaseSettings):
     token: ty.Optional[pydantic.SecretStr] = None
     jwt: ty.Optional[pydantic.SecretStr] = None
 
-    auth_role: ty.Optional[str] = None
-
     secrets: dict[str, ty.Optional[str]] = {"general": None}
     secrets_mount_point: ty.Optional[str] = None
+
+    auth_role: ty.Optional[str] = None
+    auth_mount_point: ty.Optional[str] = None
 
     logging_level: int = logging.DEBUG
 
@@ -74,17 +77,25 @@ class VaultSettings(pydantic.BaseSettings):
             path = key if value is None else value
             self.secrets[key] = f"{self.secrets_mount_point}/data/{path.strip('/')}"
 
+    @pydantic.validator("secrets_mount_point", pre=True, always=True)
+    def _set_secrets_mount_point(cls, value: ty.Optional[str]) -> str:
+        if value is not None:
+            return value.strip("/")
+        return "secrets"
+
     @pydantic.validator("auth_role", pre=True, always=True)
     def _set_auth_role(cls, value: ty.Optional[str], values: dict[str, ty.Any]) -> str:
         if value is not None:
             return value
         return f"{values['secrets_mount_point']}-{values['user_login']}"
 
-    @pydantic.validator("secrets_mount_point", pre=True, always=True)
-    def _set_secrets_mount_point(cls, value: ty.Optional[str]) -> str:
+    @pydantic.validator("auth_mount_point", pre=True, always=True)
+    def _set_auth_mount_point(
+        cls, value: ty.Optional[str], values: dict[str, ty.Any]
+    ) -> str:
         if value is not None:
             return value.strip("/")
-        return "secrets"
+        return f"{values['secrets_mount_point']}_k8s"
 
     class Config:
         env_file: str = ".env"
