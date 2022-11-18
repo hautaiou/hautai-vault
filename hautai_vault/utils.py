@@ -99,7 +99,7 @@ def _setup_fields(settings: BaseSettings, client: VaultClient) -> JSONDict:
         secret_data = _get_secret_data(settings, resp, secret_key, secret_path, field)
 
         vault_fields[field.alias] = secret_data
-        logger.info("Field %s is set to a corresponding Vault secret", field.name)
+        logger.info("Field %s has been set", field.name)
     return vault_fields
 
 

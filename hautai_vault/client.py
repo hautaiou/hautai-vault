@@ -87,17 +87,17 @@ class VaultClient(HvacClient):
         if settings.jwt is not None:
             logger.debug("Using the JWT auth method...")
             auth_params = JWTAuthMethodParams(
-                role=settings.role,
+                role=settings.auth_role,
                 jwt=settings.jwt.get_secret_value(),
-                path=settings.jwt_auth_path,
+                path=settings.secrets_mount_point,
             )
             return JWT(self.adapter).jwt_login(**auth_params.dict())
 
         logger.debug("Using the Kubernetes auth method...")
         auth_params = KubernetesAuthMethodParams(
-            role=settings.role,
+            role=settings.auth_role,
             jwt=self._get_k8s_jwt(),
-            mount_point=settings.k8s_auth_mount_point,
+            mount_point=settings.secrets_mount_point,
         )
         return Kubernetes(self.adapter).login(**auth_params.dict())
 
