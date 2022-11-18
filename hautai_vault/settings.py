@@ -22,25 +22,24 @@ class VaultSettings(pydantic.BaseSettings):
             default: {"https://vault.infra.haut.ai"}
         )
 
+        env -- current K8s env. Usually used by our services (default: {None})
+
         token -- Vault token for bypassing auth methods (default: {None})
 
         jwt -- JSON Web Token for JWT auth method (default: {None})
-
-        auth_role -- Vault auth role (default: {None})
 
         secrets -- aliases to secrets' paths mapping (
             default: {"general": None}
         ). If None is assigned as an item's value instead of path to a secret,
         then an alias name will be used as a path.
 
-        secrets_mount_point -- KV storage mount point (default: {None})
+        secrets_engine -- KV storage mount point (default: {None})
+
+        auth_role -- Vault auth role (default: {None})
+
+        auth_path -- auth login method path (default: {None})
 
         logging_level -- severity level of logging (default: {`logging.DEBUG`})
-
-    Properties:
-        auth_role -- current auth role
-
-        auth_mount_point -- mount point for a current auth method
     """
 
     user_login: str = pydantic.Field(
@@ -49,14 +48,16 @@ class VaultSettings(pydantic.BaseSettings):
     )
     enabled: bool = True
     addr: str = "https://vault.infra.haut.ai"
+    env: ty.Optional[str] = None
 
     token: ty.Optional[pydantic.SecretStr] = None
     jwt: ty.Optional[pydantic.SecretStr] = None
 
-    auth_role: ty.Optional[str] = None
-
     secrets: dict[str, ty.Optional[str]] = {"general": None}
-    secrets_mount_point: ty.Optional[str] = None
+    secrets_engine: ty.Optional[str] = None
+
+    auth_role: ty.Optional[str] = None
+    auth_path: ty.Optional[str] = None
 
     logging_level: int = logging.DEBUG
 
@@ -72,19 +73,37 @@ class VaultSettings(pydantic.BaseSettings):
     def _set_secrets_paths(self) -> None:
         for key, value in self.secrets.items():
             path = key if value is None else value
-            self.secrets[key] = f"{self.secrets_mount_point}/data/{path.strip('/')}"
+            self.secrets[key] = f"{self.secrets_engine}/data/{path.strip('/')}"
 
-    @pydantic.validator("auth_role", pre=True, always=True)
-    def _set_auth_role(cls, value: ty.Optional[str], values: dict[str, ty.Any]) -> str:
-        if value is not None:
-            return value
-        return f"{values['secrets_mount_point']}-{values['user_login']}"
-
-    @pydantic.validator("secrets_mount_point", pre=True, always=True)
-    def _set_secrets_mount_point(cls, value: ty.Optional[str]) -> str:
+    @pydantic.validator("secrets_engine", pre=True, always=True)
+    def _set_secrets_engine(
+        cls, value: ty.Optional[str], values: dict[str, ty.Any]
+    ) -> ty.Union[str, ty.NoReturn]:
         if value is not None:
             return value.strip("/")
-        return "secrets"
+        if values["env"] is not None:
+            return values["env"]
+        return exit("Either VAULT_SECRETS_ENGINE or VAULT_ENV envs must be set!")
+
+    @pydantic.validator("auth_role", pre=True, always=True)
+    def _set_auth_role(
+        cls, value: ty.Optional[str], values: dict[str, ty.Any]
+    ) -> ty.Union[str, ty.NoReturn]:
+        if value is not None:
+            return value
+        if values["env"] is not None:
+            return f"{values['env']}-{values['user_login']}"
+        return exit("Either VAULT_AUTH_ROLE or VAULT_ENV envs must be set!")
+
+    @pydantic.validator("auth_path", pre=True, always=True)
+    def _set_auth_path(
+        cls, value: ty.Optional[str], values: dict[str, ty.Any]
+    ) -> ty.Union[str, ty.NoReturn]:
+        if value is not None:
+            return value.strip("/")
+        if values["env"] is not None:
+            return f"{values['env']}_k8s"
+        return exit("Either VAULT_AUTH_PATH or VAULT_ENV envs must be set!")
 
     class Config:
         env_file: str = ".env"
