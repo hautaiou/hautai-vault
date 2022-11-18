@@ -89,7 +89,7 @@ class VaultClient(HvacClient):
             auth_params = JWTAuthMethodParams(
                 role=settings.auth_role,
                 jwt=settings.jwt.get_secret_value(),
-                path=settings.secrets_mount_point,
+                path=settings.auth_mount_point,
             )
             return JWT(self.adapter).jwt_login(**auth_params.dict())
 
@@ -97,7 +97,7 @@ class VaultClient(HvacClient):
         auth_params = KubernetesAuthMethodParams(
             role=settings.auth_role,
             jwt=self._get_k8s_jwt(),
-            mount_point=settings.secrets_mount_point,
+            mount_point=settings.auth_mount_point,
         )
         return Kubernetes(self.adapter).login(**auth_params.dict())
 
