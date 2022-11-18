@@ -33,7 +33,7 @@ class VaultSettings(pydantic.BaseSettings):
         ). If None is assigned as an item's value instead of path to a secret,
         then an alias name will be used as a path.
 
-        secrets_mount_point -- KV storage mount point, i.e. path prefix (default: {None})
+        secrets_mount_point -- KV storage mount point (default: {None})
 
         logging_level -- severity level of logging (default: {`logging.DEBUG`})
 
