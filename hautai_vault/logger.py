@@ -1,6 +1,6 @@
 """Library logger setup."""
 
-__all__ = ["logger"]
+__all__ = ("logger",)
 
 import logging
 
