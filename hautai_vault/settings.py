@@ -1,13 +1,18 @@
 """Vault settings."""
 
-__all__ = ["VaultSettings"]
+__all__ = ("VaultSettings", "vault_settings_source")
 
 import logging
 import typing as ty
 
 import pydantic
+from hvac.exceptions import VaultError
+from pydantic.env_settings import SettingsError
+from pydantic.fields import ModelField
 
+from .client import VaultClient
 from .logger import logger
+from .utils import get_auth_token_from_homedir
 
 
 class VaultSettings(pydantic.BaseSettings):
@@ -78,39 +83,163 @@ class VaultSettings(pydantic.BaseSettings):
             path = key if value is None else value
             self.secrets[key] = f"{self.secrets_engine}/data/{path.strip('/')}"
 
+    @pydantic.validator("token", pre=True, always=True)
+    def _set_token(
+        cls, value: ty.Optional[pydantic.SecretStr]
+    ) -> ty.Optional[pydantic.SecretStr]:
+        if value is not None:
+            logger.debug("Found Vault auth token in environment variables")
+            return value
+        return get_auth_token_from_homedir()
+
     @pydantic.validator("secrets_engine", pre=True, always=True)
     def _set_secrets_engine(
         cls, value: ty.Optional[str], values: dict[str, ty.Any]
-    ) -> ty.Union[str, ty.NoReturn]:
+    ) -> ty.Optional[ty.Union[str, ty.NoReturn]]:
         if value is not None:
             return value.strip("/")
+        if values["token"] is not None:
+            return None
         if values["env"] is not None:
             return values["env"]
-        return exit("Either VAULT_SECRETS_ENGINE or VAULT_ENV envs must be set!")
+        return exit(
+            "Either VAULT_SECRETS_ENGINE or VAULT_ENV envs must be set "
+            "to authenticate via K8s or JWT auth methods in production. "
+            "For a local development, you could set VAULT_TOKEN env or "
+            "login via Vault CLI prior to executing the script."
+        )
 
     @pydantic.validator("auth_role", pre=True, always=True)
     def _set_auth_role(
         cls, value: ty.Optional[str], values: dict[str, ty.Any]
-    ) -> ty.Union[str, ty.NoReturn]:
+    ) -> ty.Optional[ty.Union[str, ty.NoReturn]]:
         if value is not None:
             return value
+        if values["token"] is not None:
+            return None
         if values["env"] is not None and values["user_login"] is not None:
             return f"{values['env']}-{values['user_login']}"
         return exit(
-            "Either VAULT_AUTH_ROLE or both VAULT_ENV and VAULT_USER_LOGIN "
-            "envs must be set!"
+            "Either set VAULT_AUTH_ROLE or both VAULT_ENV and VAULT_USER_LOGIN envs "
+            "to authenticate via K8s or JWT auth methods in production. "
+            "For a local development, you could set VAULT_TOKEN env or "
+            "login via Vault CLI prior to executing the script."
         )
 
     @pydantic.validator("auth_path", pre=True, always=True)
     def _set_auth_path(
         cls, value: ty.Optional[str], values: dict[str, ty.Any]
-    ) -> ty.Union[str, ty.NoReturn]:
+    ) -> ty.Optional[ty.Union[str, ty.NoReturn]]:
         if value is not None:
             return value.strip("/")
+        if values["token"] is not None:
+            return None
         if values["env"] is not None:
             return f"{values['env']}_k8s"
-        return exit("Either VAULT_AUTH_PATH or VAULT_ENV envs must be set!")
+        return exit(
+            "Either VAULT_AUTH_PATH or VAULT_ENV envs must be set "
+            "to authenticate via K8s or JWT auth methods in production. "
+            "For a local development, you could set VAULT_TOKEN env or "
+            "login via Vault CLI prior to executing the script."
+        )
 
     class Config:
         env_file: str = ".env"
         env_prefix: str = "vault_"
+
+
+JSONDict = dict[str, ty.Any]
+
+
+def vault_settings_source(settings: pydantic.BaseSettings) -> JSONDict:
+    """Enable Vault as a source for setting up an application.
+
+    Arguments:
+        settings -- application settings
+
+    Returns:
+        a dictionary of fields which values are set via Vault.
+    """
+    vault_settings: VaultSettings = settings.__config__.vault_settings
+    client = _setup_client(vault_settings)
+    return _setup_fields(settings, client)
+
+
+def _setup_client(vault_settings: VaultSettings) -> VaultClient:
+    auth_token = vault_settings.token
+    if auth_token is not None:
+        return VaultClient(token=auth_token.get_secret_value(), url=vault_settings.addr)
+    client = VaultClient(url=vault_settings.addr)
+    client.auth(vault_settings)
+    return client
+
+
+def _setup_fields(settings: pydantic.BaseSettings, client: VaultClient) -> JSONDict:
+    vault_fields: JSONDict = {}
+    for field in settings.__fields__.values():
+        secret_path: ty.Optional[str] = _get_secret_path(field)
+        if secret_path is None:
+            logger.debug("Skipping %s field...", field.name)
+            continue
+
+        resp = _get_response(client, secret_path, field)
+        if resp is None:
+            logger.info("Applying the default for %s field...", field.name)
+            continue
+
+        secret_key = _get_secret_key(field)
+        secret_data = _get_secret_data(settings, resp, secret_key, secret_path, field)
+
+        vault_fields[field.alias] = secret_data
+        logger.info("Field %s has been set", field.name)
+    return vault_fields
+
+
+def _get_secret_path(field: ModelField) -> ty.Optional[str]:
+    return field.field_info.extra.get("vault_secret_path")
+
+
+def _get_response(
+    client: VaultClient, secret_path: str, field: ModelField
+) -> ty.Optional[JSONDict]:
+    try:
+        return client.read(secret_path)["data"]
+    except VaultError:
+        logger.exception("Failed to get the following secret: %s", secret_path)
+    except TypeError:
+        # Response is None.
+        logger.error("Invalid path to a secret: %s", secret_path)
+
+    if field.required:
+        raise ValueError(f"Couldn't set a value for a required field {field.name}")
+    return None
+
+
+def _get_secret_key(field: ModelField) -> ty.Optional[str]:
+    return field.field_info.extra.get("vault_secret_key")
+
+
+def _get_secret_data(
+    settings: pydantic.BaseSettings,
+    resp: JSONDict,
+    secret_key: ty.Optional[str],
+    secret_path: str,
+    field: ModelField,
+) -> ty.Any:
+    secret_data = resp.get("data", resp)
+    if secret_key is not None:
+        secret_path = ":".join((secret_path, secret_key))
+        try:
+            secret_data = secret_data[secret_key]
+        except KeyError:
+            logger.error("Wrong key for a secret! Full path: %s", secret_path)
+            logger.info("Applying the default for %s field...", field.name)
+            return field.get_default()
+
+    if not field.is_complex() or isinstance(secret_data, (dict, list)):
+        return secret_data
+
+    try:
+        return settings.__config__.json_loads(secret_data)
+    except ValueError as e:
+        raise SettingsError(f"JSON parsing error for {secret_path}") from e
