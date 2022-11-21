@@ -1,6 +1,6 @@
 """Vault settings."""
 
-__all__ = ["VaultSettings"]
+__all__ = ("VaultSettings", "vault_settings_source")
 
 import logging
 import typing as ty
