@@ -1,6 +1,6 @@
 """Utility functions."""
 
-__all__ = ("get_auth_token_from_homedir", "write_secrets_into_temp_files")
+__all__ = ("maybe_get_auth_token_from_homedir", "write_secrets_into_temp_files")
 
 import json
 import tempfile
@@ -12,10 +12,10 @@ import pydantic
 from .logger import logger
 
 
-def get_auth_token_from_homedir() -> ty.Optional[pydantic.SecretStr]:
+def maybe_get_auth_token_from_homedir() -> ty.Optional[pydantic.SecretStr]:
     try:
         with open(Path.home() / ".vault-token") as f:
-            logger.debug("Vault auth token is taken from '~/.vault-token' file")
+            logger.debug("Vault auth token is taken from '~/.vault-token' file.")
             return pydantic.SecretStr(f.read().strip())
     except FileNotFoundError:
         return None
