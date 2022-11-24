@@ -100,15 +100,11 @@ class VaultSettings(pydantic.BaseSettings):
     ) -> ty.Optional[str]:
         if value is not None:
             return value.strip("/")
-        if values["token"] is not None:
-            return None
         if values["env"] is not None:
             return values["env"]
         return sys.exit(
             "Either VAULT_SECRETS_ENGINE or VAULT_ENV envs must be set "
-            "to authenticate via K8s or JWT auth methods in production. "
-            "For a local development, you could set VAULT_TOKEN env or "
-            "login via Vault CLI prior to executing the script."
+            "for constructing proper paths to Vault secrets. "
         )
 
     @pydantic.validator("auth_role", pre=True, always=True)
