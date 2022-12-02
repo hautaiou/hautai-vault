@@ -4,7 +4,6 @@ __all__ = ("VaultSettings", "vault_settings_source")
 
 import enum
 import logging
-import sys
 import typing as ty
 
 import pydantic
@@ -78,14 +77,26 @@ class VaultSettings(pydantic.BaseSettings):
         logging.basicConfig()
         logging.getLogger(logger.name).setLevel(self.logging_level)
 
-        self._set_secrets_paths()
+        if self.enabled:
+            self._set_secrets_paths()
 
     def _set_secrets_paths(self) -> None:
+        prefix = self.secrets_engine or self.env
+        if prefix is None:
+            raise ValueError(
+                "Either `secrets_engine` or `env` fields must not be `None` "
+                "for constructing proper paths to Vault secrets. "
+                "You may pass the corresponding keyword arguments when "
+                "instantiating the `VaultSettings` class programmatically. "
+                "Otherwise, consider setting `VAULT_SECRETS_ENGINE`, "
+                "`VAULT_ENV`, or both environment variables "
+                "to (a) non-empty value(-s)."
+            )
         for key, value in self.secrets.items():
             path = key if value is None else value
-            self.secrets[key] = f"{self.secrets_engine}/data/{path.strip('/')}"
+            self.secrets[key] = f"{prefix}/{path.strip('/')}"
 
-    @pydantic.validator("token", pre=True, always=True)
+    @pydantic.validator("token", always=True)
     def _set_token(
         cls, value: ty.Optional[pydantic.SecretStr]
     ) -> ty.Optional[pydantic.SecretStr]:
@@ -94,51 +105,52 @@ class VaultSettings(pydantic.BaseSettings):
             return value
         return maybe_get_auth_token_from_homedir()
 
-    @pydantic.validator("secrets_engine", pre=True, always=True)
-    def _set_secrets_engine(
-        cls, value: ty.Optional[str], values: dict[str, ty.Any]
-    ) -> ty.Optional[str]:
-        if value is not None:
-            return value.strip("/")
-        if values["env"] is not None:
-            return values["env"]
-        return sys.exit(
-            "Either VAULT_SECRETS_ENGINE or VAULT_ENV envs must be set "
-            "for constructing proper paths to Vault secrets. "
-        )
-
-    @pydantic.validator("auth_role", pre=True, always=True)
+    @pydantic.validator("auth_role", always=True)
     def _set_auth_role(
         cls, value: ty.Optional[str], values: dict[str, ty.Any]
     ) -> ty.Optional[str]:
-        if value is not None:
+        if (
+            value is not None
+            or values["token"] is not None
+            or values["enabled"] is False
+        ):
             return value
-        if values["token"] is not None:
-            return None
         if values["env"] is not None and values["user_login"] is not None:
             return f"{values['env']}-{values['user_login']}"
-        return sys.exit(
-            "Either set VAULT_AUTH_ROLE or both VAULT_ENV and VAULT_USER_LOGIN envs "
-            "to authenticate via K8s or JWT auth methods in production. "
-            "For a local development, you could set VAULT_TOKEN env or "
-            "login via Vault CLI prior to executing the script."
+        raise ValueError(
+            "Either `auth_role` or both `env` and `user_login` fields "
+            "must not be `None` to authenticate via K8s or JWT "
+            "auth methods in production. "
+            "You may pass the corresponding keyword arguments when "
+            "instantiating the `VaultSettings` class programmatically. "
+            "Otherwise, consider setting `VAULT_AUTH_ROLE` or both "
+            "`VAULT_ENV` and `VAULT_USER_LOGIN ` environment variables "
+            "to (a) non-empty value(-s)."
+            "For a local development, you could instead set `VAULT_TOKEN` "
+            "env var or login via Vault CLI prior to executing the script."
         )
 
-    @pydantic.validator("auth_path", pre=True, always=True)
+    @pydantic.validator("auth_path", always=True)
     def _set_auth_path(
         cls, value: ty.Optional[str], values: dict[str, ty.Any]
     ) -> ty.Optional[str]:
-        if value is not None:
-            return value.strip("/")
-        if values["token"] is not None:
-            return None
+        if (
+            value is not None
+            or values["token"] is not None
+            or values["enabled"] is False
+        ):
+            return value
         if values["env"] is not None:
             return f"{values['env']}_k8s"
-        return sys.exit(
-            "Either VAULT_AUTH_PATH or VAULT_ENV envs must be set "
+        raise ValueError(
+            "Either `auth_path` or `env` fields must not be `None` "
             "to authenticate via K8s or JWT auth methods in production. "
-            "For a local development, you could set VAULT_TOKEN env or "
-            "login via Vault CLI prior to executing the script."
+            "You may pass the corresponding keyword arguments when "
+            "instantiating the `VaultSettings` class programmatically. "
+            "Otherwise, consider setting `VAULT_AUTH_PATH`, `VAULT_ENV`, "
+            "or both environment variables to (a) non-empty value(-s)."
+            "For a local development, you could instead set `VAULT_TOKEN` "
+            "env var or login via Vault CLI prior to executing the script."
         )
 
     class Config:
@@ -182,9 +194,7 @@ def _setup_fields(settings: pydantic.BaseSettings, client: VaultClient) -> JSOND
     vault_fields: JSONDict = {}
 
     for field in settings.__fields__.values():
-        secret_path: ty.Optional[str] = _get_field_extra_arg(
-            field, FieldSecretsArg.PATH
-        )
+        secret_path: ty.Optional[str] = _get_field_extra_arg(field, FieldSecretsArg.PATH)
         if secret_path is None:
             logger.debug("Skipping `%s`...", field.name)
             continue
