@@ -94,7 +94,7 @@ class VaultSettings(pydantic.BaseSettings):
             )
         for key, value in self.secrets.items():
             path = key if value is None else value
-            self.secrets[key] = f"{prefix}/{path.strip('/')}"
+            self.secrets[key] = f"{prefix}/data/{path.strip('/')}"
 
     @pydantic.validator("token", always=True)
     def _set_token(
