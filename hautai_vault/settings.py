@@ -13,39 +13,43 @@ from pydantic.fields import ModelField
 
 from .client import VaultClient
 from .logger import logger
-from .utils import maybe_get_auth_token_from_homedir
+from .utils import maybe_read_auth_token_from_file
 
 
 class VaultSettings(pydantic.BaseSettings):
     """Provides the nessesary means to set up and use Hashicorp Vault.
 
     Fields:
-        enabled -- can the Vault be used or not (default: {True})
+        enabled -- can the Vault be used or not (default: {`True`})
 
-        addr -- URL for the Vault instance being addressed (
-            default: {"https://vault.infra.haut.ai"}
-        )
+        addr -- URL for the Vault instance being addressed
+            (default: {"https://vault.infra.haut.ai"})
 
-        env -- current K8s env for backend services (default: {None})
+        env -- current K8s env for backend services (default: {`None`})
 
-        user_login -- used as a fallback auth role together with env (
-            default: {None}
-        )
+        user_login -- used as a fallback auth role together with env
+            (default: {`None`})
 
-        token -- Vault token for bypassing auth methods (default: {None})
+        token_file -- file name or path, either relative or absolute, from
+            which an auth token should be read (default: {".vault-token"})
 
-        jwt -- JSON Web Token for JWT auth method (default: {None})
+        token -- Vault token for bypassing auth methods (default: {`None`})
 
-        secrets -- aliases to secrets' paths mapping (
-            default: {"general": None}
-        ). If None is assigned as an item's value instead of path to a secret,
-        then an alias name will be used as a path.
+        jwt -- JSON Web Token for JWT auth method (default: {`None`})
 
-        secrets_engine -- KV storage mount point (default: {None})
+        secrets -- mapping of aliases to secrets' paths. `None` can be used
+            in values as a shortcut to interpret an alias as a path,
+            e.g. {"foo": `None`} will be resolved to
+            {"foo": "`self.secrets_engine`/data/foo"}.
+            NOTE: when specifying a path, omit the "prefix/data/" part,
+            i.e. "`self.secrets_engine`/data/path/to/a/secret" is WRONG,
+            but "path/to/a/secret" is CORRECT (default: {"general": `None`})
 
-        auth_role -- Vault auth role (default: {None})
+        secrets_engine -- KV storage mount point (default: {`None`})
 
-        auth_path -- auth login method path (default: {None})
+        auth_role -- Vault auth role (default: {`None`})
+
+        auth_path -- auth login method path (default: {`None`})
 
         logging_level -- severity level of logging (default: {`logging.DEBUG`})
     """
@@ -59,6 +63,7 @@ class VaultSettings(pydantic.BaseSettings):
         env=["vault_user_login", "service_account_name"],
     )
 
+    token_file: str = ".vault-token"
     token: ty.Optional[pydantic.SecretStr] = None
     jwt: ty.Optional[pydantic.SecretStr] = None
 
@@ -98,12 +103,12 @@ class VaultSettings(pydantic.BaseSettings):
 
     @pydantic.validator("token", always=True)
     def _set_token(
-        cls, value: ty.Optional[pydantic.SecretStr]
+        cls, value: ty.Optional[pydantic.SecretStr], values: dict[str, ty.Any]
     ) -> ty.Optional[pydantic.SecretStr]:
         if value is not None:
             logger.debug("Found Vault auth token in environment variables.")
             return value
-        return maybe_get_auth_token_from_homedir()
+        return maybe_read_auth_token_from_file(values["token_file"])
 
     @pydantic.validator("auth_role", always=True)
     def _set_auth_role(
@@ -126,8 +131,13 @@ class VaultSettings(pydantic.BaseSettings):
             "Otherwise, consider setting `VAULT_AUTH_ROLE` or both "
             "`VAULT_ENV` and `VAULT_USER_LOGIN ` environment variables "
             "to (a) non-empty value(-s)."
-            "For a local development, you could instead set `VAULT_TOKEN` "
-            "env var or login via Vault CLI prior to executing the script."
+            "For a local development, you could instead:\n"
+            "1) provide an auth token via `VAULT_TOKEN` env var or "
+            "pass it as a keyword argument in the class' constructor;\n"
+            "2) login via Vault CLI prior to executing the script.\n"
+            "If your token file resembles in a non-default place "
+            "(~/.vault-token), you may point to it by setting an env var "
+            "VAULT_TOKEN_FILE or the corresponding class attribute."
         )
 
     @pydantic.validator("auth_path", always=True)
@@ -149,8 +159,13 @@ class VaultSettings(pydantic.BaseSettings):
             "instantiating the `VaultSettings` class programmatically. "
             "Otherwise, consider setting `VAULT_AUTH_PATH`, `VAULT_ENV`, "
             "or both environment variables to (a) non-empty value(-s)."
-            "For a local development, you could instead set `VAULT_TOKEN` "
-            "env var or login via Vault CLI prior to executing the script."
+            "For a local development, you could instead:\n"
+            "1) provide an auth token via `VAULT_TOKEN` env var or "
+            "pass it as a keyword argument in the class' constructor;\n"
+            "2) login via Vault CLI prior to executing the script.\n"
+            "If your token file resembles in a non-default place "
+            "(~/.vault-token), you may point to it by setting an env var "
+            "VAULT_TOKEN_FILE or the corresponding class attribute."
         )
 
     class Config:
