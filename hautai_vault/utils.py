@@ -18,7 +18,7 @@ def maybe_read_auth_token_from_file(token_file: str) -> ty.Optional[pydantic.Sec
         abs_path = Path.home() / token_file
     try:
         with abs_path.open() as file:
-            logger.debug(f"Vault auth token is taken from {abs_path}.")
+            logger.debug("Vault auth token is taken from %s", abs_path)
             return pydantic.SecretStr(file.read().strip())
     except FileNotFoundError:
         return None

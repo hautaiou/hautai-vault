@@ -13,8 +13,7 @@ import typing as ty
 import pydantic
 import requests
 from hvac import Client as HvacClient
-from hvac.adapters import Adapter, JSONAdapter
-from hvac.api.auth_methods import Azure, JWT, Kubernetes
+from hvac.api.auth_methods import JWT, Azure, Kubernetes
 
 from .logger import logger
 
@@ -52,18 +51,20 @@ class AzureAuthMethodParams(AuthMethodParams):
     Extends `AuthMethodParams`.
 
     Fields:
-        subscription_id -- subscription ID for the machine that generated the MSI token.
+        subscription_id -- subscription ID for the machine that generated the
+        MSI token. Can be obtained via instance metadata (default: {`None`})
+
+        resource_group_name -- resource group for the machine that generated
+            the MSI token. Can be obtained via instance metadata
+            (default: {`None`})
+
+        vm_name -- virtual machine name for the machine that generated the
+            MSI token. If vmss_name is provided, this value is ignored.
             Can be obtained via instance metadata (default: {`None`})
 
-        resource_group_name -- resource group for the machine that generated the MSI
-            token. Can be obtained via instance metadata (default: {`None`})
-
-        vm_name -- virtual machine name for the machine that generated the MSI token.
-            If vmss_name is provided, this value is ignored.
-            Can be obtained via instance metadata (default: {`None`})
-
-        vmss_name -- virtual machine scale set name for the machine that generated
-            the MSI token. Can be obtained via instance metadata. (default: {`None`})
+        vmss_name -- virtual machine scale set name for the machine that
+            generated the MSI token. Can be obtained via instance metadata
+            (default: {`None`})
 
         mount_point -- auth method mount point (default: {"azure"})
     """
@@ -146,7 +147,9 @@ class VaultClient(HvacClient):
         if settings.auth_path is not None and settings.auth_path.endswith("_k8s"):
             return AuthMethod.K8S
         if settings.jwt is not None:
-            return AuthMethod.JWT if settings.auth_path == "gitlab" else AuthMethod.AZURE
+            if settings.auth_path == "gitlab":
+                return AuthMethod.JWT
+            return AuthMethod.AZURE
         raise ValueError("Couldn't determine a proper auth method.")
 
     def _get_k8s_jwt(self) -> str:
