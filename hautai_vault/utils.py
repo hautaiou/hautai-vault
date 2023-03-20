@@ -1,6 +1,6 @@
 """Internal utility functions."""
 
-__all__ = ("maybe_read_auth_token_from_file", "write_secrets_into_temp_files")
+__all__ = ("read_auth_token_from_file", "write_secrets_into_temp_files")
 
 import json
 import tempfile
@@ -12,16 +12,27 @@ import pydantic
 from .logger import logger
 
 
-def maybe_read_auth_token_from_file(token_file: str) -> ty.Optional[pydantic.SecretStr]:
-    abs_path = Path(token_file).expanduser()
-    if not abs_path.exists():
-        abs_path = Path.home() / token_file
+def read_auth_token_from_file(token_path: str) -> ty.Optional[pydantic.SecretStr]:
     try:
-        with abs_path.open() as file:
-            logger.debug("Vault auth token is taken from %s", abs_path)
-            return pydantic.SecretStr(file.read().strip())
-    except FileNotFoundError:
+        parsed_path = Path(token_path).expanduser()
+    except RuntimeError:
+        logger.error("Token path is invalid")
         return None
+
+    if not parsed_path.exists():
+        parsed_path = Path.home() / token_path
+
+    try:
+        token_file = parsed_path.open()
+    except FileNotFoundError:
+        logger.error("Token path is invalid")
+        return None
+
+    token = token_file.read().strip()
+    token_file.close()
+
+    logger.debug("Got an auth token from %s", parsed_path)
+    return pydantic.SecretStr(token)
 
 
 def write_secrets_into_temp_files(
