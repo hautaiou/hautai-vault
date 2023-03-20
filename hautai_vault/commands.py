@@ -49,7 +49,7 @@ class GetVaultSecrets:
             secret_data = self._get_secret_data(secret, key, path, field)
 
             if secret_data is None:
-                logger.error("Unable to set secret data for `%s` field", field.name)
+                logger.error("Unable to fetch secret data for `%s` field", field.name)
                 continue
 
             vault_fields[field.alias] = secret_data
@@ -74,19 +74,14 @@ class GetVaultSecrets:
         path: str,
         field: "ModelField",
     ) -> ty.Any:
-        if key is None:
-            secret_data = secret.get("data", secret)
-        else:
-            secret_data = secret.get("data", secret).get(key)
+        secret_data = secret.get("data", secret)
+        if key is not None:
+            secret_data = secret_data.get(key)
 
-        if (
-            secret_data is None
-            or field.is_complex()
-            and isinstance(secret_data, (dict, list))
-        ):
-            return secret_data
+        if field.is_complex() and not isinstance(secret_data, (dict, list)):
+            try:
+                return self.settings.__config__.json_loads(secret_data)
+            except ValueError as exc:
+                raise SettingsError(f"Parsing error for a secret at {path}") from exc
 
-        try:
-            return self.settings.__config__.json_loads(secret_data)
-        except ValueError as exc:
-            raise SettingsError(f"JSON parsing error for a secret at {path}") from exc
+        return secret_data
