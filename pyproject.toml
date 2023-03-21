@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hautai_vault"
-version = "2.5.4"
+version = "2.6.1"
 description = "A library providing means to interact with Hashicorp Vault"
 authors = ["Vladislav Plisov <v.plisov@haut.ai>"]
 repository = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload"
@@ -9,15 +9,15 @@ exclude = ["**/tests"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pydantic = { version = "^1.10.2", extras = ["dotenv"] }
-hvac = "^1.0.2"
+pydantic = { version = "^1.10.6", extras = ["dotenv"] }
+hvac = "^1.1.0"
 
 [tool.poetry.group.formatters.dependencies]
-black = "^22.10.0"
-isort = "^5.10.1"
+black = "^23.1.0"
+isort = "^5.12.0"
 
 [tool.poetry.group.linters.dependencies]
-bandit = "^1.7.4"
+bandit = "^1.7.5"
 flake8 = "<6"
 flake8-aaa = "^0.12.2"
 flake8-annotations-complexity = "^0.0.7"
@@ -38,11 +38,12 @@ flake8-simplify = "^0.19.3"
 flake8-string-format = "^0.3.0"
 flake8-todos = "^0.2.1"
 flake8-variables-names = "^0.0.5"
-mypy = "^0.991"
+mypy = "^1.1.1"
 
 [tool.poetry.group.shell.dependencies]
-ipython = "^8.7.0"
-rich = "^12.6.0"
+ipython = "^8.11.0"
+rich = "^13.3.2"
+pytest = "^7.2.2"
 
 [tool.poetry.group.tests.dependencies]
 pytest = "^7.2.0"

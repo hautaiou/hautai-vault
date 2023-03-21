@@ -17,23 +17,10 @@ format: ## Call to format your code with black and isort
 	isort "${PACKAGE_NAME}"
 	black "${PACKAGE_NAME}"
 
-verify_format: ## CI will call that to validate your code
-	black --check "${PACKAGE_NAME}"
-
-build_wheel: ## CI will call that to build your code
-	python3 setup.py bdist_wheel
-
-push_wheel_to_repo: ## Ci will call that to push your code to pypi repo
-	twine upload -r "${WHEEL_REPO}" dist/*
-
-run_tests: install_requirements download_weights ## CI can call that for you to run test on your code, feel free to change command if you want
-	pytest -svvv tests/
+run_tests: ## Run pytest
+	pytest -svvv --log-cli-level=DEBUG tests/
 
 analyse_security: ## Python security check, based on bandit (severity is medium or more}
 	bandit -r -ll "${PACKAGE_NAME}"
 
-pre_push_test: verify_format lint run_tests analyse_security## Call to pre-check your code before push
-
-run_dev_container:
-	docker-compose build
-	docker-compose run lib-build bash
+pre_push_test: format lint run_tests analyse_security ## Check code before push
