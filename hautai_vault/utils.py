@@ -1,6 +1,6 @@
 """Internal utility functions."""
 
-__all__ = ("read_auth_token_from_file", "write_secrets_into_temp_files")
+__all__ = ("boldify", "read_auth_token_from_file", "write_secrets_into_temp_files")
 
 import json
 import tempfile
@@ -10,6 +10,10 @@ from pathlib import Path
 import pydantic
 
 from .logger import logger
+
+
+def boldify(text: str) -> str:
+    return f"\033[1m{text}\033[0m"
 
 
 def read_auth_token_from_file(token_path: str) -> ty.Optional[pydantic.SecretStr]:
