@@ -25,7 +25,7 @@ class ArgType(str, enum.Enum):
     PATH = "vault_secret_path"
 
 
-@dataclass(eq=False, match_args=False)
+@dataclass(eq=False)
 class GetVaultSecrets:
     settings: "BaseSettings"
     client: "VaultClient"
