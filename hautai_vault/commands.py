@@ -48,7 +48,7 @@ class GetVaultSecrets:
             key = model_field.field_info.extra.get(ArgType.KEY.value)
             secret_data = self._get_secret_data(secret, key, path, model_field)
             if secret_data is None:
-                logger.error(
+                logger.debug(
                     "Unable to fetch secret data for %s field",
                     boldify(model_field.name),
                 )

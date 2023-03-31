@@ -20,7 +20,7 @@ def read_auth_token_from_file(token_path: str) -> ty.Optional[pydantic.SecretStr
     try:
         parsed_path = Path(token_path).expanduser()
     except RuntimeError:
-        logger.error("Token path is invalid")
+        logger.debug("Token path is invalid")
         return None
 
     if not parsed_path.exists():
@@ -29,7 +29,7 @@ def read_auth_token_from_file(token_path: str) -> ty.Optional[pydantic.SecretStr
     try:
         token_file = parsed_path.open()
     except FileNotFoundError:
-        logger.error("Token path is invalid")
+        logger.debug("Token path is invalid")
         return None
 
     token = token_file.read().strip()
