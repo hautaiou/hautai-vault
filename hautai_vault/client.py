@@ -124,6 +124,8 @@ class VaultClient(HvacClient):
             an HTTP response
         """
         auth_method = self._get_auth_method(settings)
+        if isinstance(self.adapter.token, pydantic.SecretStr):
+            self.adapter.token = self.adapter.token.get_secret_value()
 
         if auth_method is AuthMethod.AZURE:
             cmd = shlex.join(split_command=["az", "account", "get-access-token"])
@@ -142,8 +144,7 @@ class VaultClient(HvacClient):
                 role=settings.auth_role,
                 jwt=parsed.accessToken.get_secret_value(),
             )
-            if isinstance(self.adapter.token, pydantic.SecretStr):
-                self.adapter.token = self.adapter.token.get_secret_value()
+
             return Azure(self.adapter).login(**auth_params.dict())
 
         if auth_method is AuthMethod.JWT:
@@ -152,7 +153,11 @@ class VaultClient(HvacClient):
                 jwt=settings.jwt.get_secret_value(),
                 path=settings.auth_path,
             )
-            return JWT(self.adapter).jwt_login(**auth_params.dict())
+            return JWT(self.adapter).jwt_login(
+                role=settings.auth_role,
+                jwt=settings.jwt.get_secret_value(),
+                path=settings.auth_path,
+            )
 
         auth_params = KubernetesAuthMethodParams(
             role=settings.auth_role,
