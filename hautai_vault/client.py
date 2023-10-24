@@ -126,7 +126,6 @@ class VaultClient(HvacClient):
         auth_method = self._get_auth_method(settings)
 
         if auth_method is AuthMethod.AZURE:
-            # azure_token = AzureCliCredential().get_token("openid")
             cmd = shlex.join(split_command=["az", "account", "get-access-token"])
             try:
                 azure_token = subprocess.run(
