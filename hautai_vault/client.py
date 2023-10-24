@@ -9,14 +9,12 @@ __all__ = (
 )
 
 import enum
-import json
 import shlex
 import subprocess
 import typing as ty
 from datetime import datetime
 
 import pydantic
-from azure.identity import AzureCliCredential
 from hvac import Client as HvacClient
 from hvac.api.auth_methods import JWT, Azure, Kubernetes
 
