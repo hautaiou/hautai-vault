@@ -9,9 +9,14 @@ __all__ = (
 )
 
 import enum
+import json
+import shlex
+import subprocess
 import typing as ty
+from datetime import datetime
 
 import pydantic
+from azure.identity import AzureCliCredential
 from hvac import Client as HvacClient
 from hvac.api.auth_methods import JWT, Azure, Kubernetes
 
@@ -53,29 +58,9 @@ class AzureAuthMethodParams(BaseAuthMethodParams):
     Extends `BaseAuthMethodParams`.
 
     Fields:
-        subscription_id -- subscription ID for the machine that generated the
-            MSI token. Can be obtained via instance metadata
-            (default: {`None`})
-
-        resource_group_name -- resource group name for the machine that
-            generated the MSI token. Can be obtained via instance metadata
-            (default: {`None`})
-
-        vm_name -- virtual machine name for the machine that generated the
-            MSI token. If `vmss_name` is provided, this value is ignored.
-            Can be obtained via instance metadata (default: {`None`})
-
-        vmss_name -- virtual machine scale set name for the machine that
-            generated the MSI token. Can be obtained via instance metadata
-            (default: {`None`})
-
         mount_point -- auth method mount point (default: {"azure"})
     """
 
-    subscription_id: ty.Optional[str] = None
-    resource_group_name: ty.Optional[str] = None
-    vm_name: ty.Optional[str] = None
-    vmss_name: ty.Optional[str] = None
     mount_point: str = "azure"
 
 
@@ -101,6 +86,18 @@ class KubernetesAuthMethodParams(BaseAuthMethodParams):
     """
 
     mount_point: str
+
+
+class AzTokenResp(pydantic.BaseModel):
+    accessToken: pydantic.SecretStr
+    expiresOn: datetime
+    subscription: str
+    tenant: str
+    tokenType: str
+
+
+class AzureCliError(Exception):
+    ...
 
 
 class VaultClient(HvacClient):
@@ -129,10 +126,25 @@ class VaultClient(HvacClient):
         auth_method = self._get_auth_method(settings)
 
         if auth_method is AuthMethod.AZURE:
+            # azure_token = AzureCliCredential().get_token("openid")
+            cmd = shlex.join(split_command=["az", "account", "get-access-token"])
+            try:
+                azure_token = subprocess.run(
+                    cmd,
+                    shell=True,
+                    capture_output=True,
+                    check=True,
+                )
+            except subprocess.CalledProcessError as e:
+                raise AzureCliError(str(e.stderr)) from e
+
+            parsed = AzTokenResp.parse_raw(azure_token.stdout)
             auth_params = AzureAuthMethodParams(
                 role=settings.auth_role,
-                jwt=settings.msi_token,
+                jwt=parsed.accessToken.get_secret_value(),
             )
+            if isinstance(self.adapter.token, pydantic.SecretStr):
+                self.adapter.token = self.adapter.token.get_secret_value()
             return Azure(self.adapter).login(**auth_params.dict())
 
         if auth_method is AuthMethod.JWT:
@@ -151,7 +163,7 @@ class VaultClient(HvacClient):
         return Kubernetes(self.adapter).login(**auth_params.dict())
 
     def _get_auth_method(self, settings: "VaultSettings") -> AuthMethod:
-        if settings.msi_token is not None:
+        if settings.azure:
             logger.debug("Using the Azure auth method")
             return AuthMethod.AZURE
         if settings.jwt is not None:
