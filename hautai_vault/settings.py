@@ -59,6 +59,7 @@ class VaultSettings(pydantic.BaseSettings):
     token_path: str = "~/.vault-token"
     token: ty.Optional[pydantic.SecretStr] = None
     msi_token: ty.Optional[pydantic.SecretStr] = None
+    azure: bool = False
     jwt: ty.Optional[pydantic.SecretStr] = None
 
     env: ty.Optional[str] = None

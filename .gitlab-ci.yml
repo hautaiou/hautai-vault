@@ -5,7 +5,7 @@ build:
   stage: build
   image: python:3.11
   variables:
-    POETRY_HTTP_BASIC_HAUT_AI_USERNAME: ${SASUKE_PYTHON_REPO_USERNAME}
+    POETRY_HTTP_BASIC_HAUT_AI_USERNAME: ${SASUKE_PYTHON_REPO_PUSH_USERNAME}
     POETRY_HTTP_BASIC_HAUT_AI_PASSWORD: ${SASUKE_PYTHON_REPO_PUSH_PASSWORD}
   before_script:
     - curl -sSL https://install.python-poetry.org | python -
