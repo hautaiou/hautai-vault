@@ -5,7 +5,6 @@ import typing as ty
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import Any
 
 import requests
 from hvac import Client
@@ -143,6 +142,7 @@ class EnvSettings(BaseSettings):
     env: str = "dev"
 
     class Config:
+        extra = "allow"
         env_file: str = ".env"
 
 
@@ -162,6 +162,7 @@ class VaultSettings(BaseSettings):
     auth_method: str | None = None
 
     class Config:
+        extra = "allow"
         env_file: str = ".env"
         env_prefix = "VAULT_"
 
@@ -208,13 +209,18 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
             raise_on_deleted_version=True,
         )["data"]["data"]
 
+    def prepare_field_value(
+        self, field_name: str, field: FieldInfo, value: ty.Any, value_is_complex: bool
+    ) -> ty.Any:
+        return value
+
     def get_field_value(
         self, field: FieldInfo, field_name: str
-    ) -> tuple[Any, str, bool]:
+    ) -> tuple[ty.Any, str, bool]:
         field_value = self._secrets.get(field_name)
         return field_value, field_name, False
 
-    def __call__(self) -> dict[str, Any]:
+    def __call__(self) -> dict[str, ty.Any]:
         data = {}
         for field_name, field in self.settings_cls.model_fields.items():
             field_value, field_key, value_is_complex = self.get_field_value(
@@ -253,6 +259,7 @@ class VaultBaseSettings(BaseSettings):
         )
 
     class Config:
+        extra = "allow"
         env_file: str = ".env"
 
 
