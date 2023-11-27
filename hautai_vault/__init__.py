@@ -10,7 +10,6 @@ from typing import Any
 import requests
 from hvac import Client
 from pydantic import BaseModel, Field, SecretStr
-from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 from requests.adapters import HTTPAdapter
@@ -39,7 +38,7 @@ def get_session(
 
 
 class AbstractVaultAuthMethod(BaseSettings):
-    role: str = Field(..., alias="VAULT_AUTH_ROLE")
+    role: str = Field(..., alias="vault_auth_role")
 
     @abc.abstractmethod
     def get_authorized_client(self) -> Client:
@@ -72,7 +71,7 @@ class AzureAuthMethod(AbstractVaultAuthMethod):
 
         ps_access_token = PSAccessToken.model_validate(ret.stdout)
 
-        client = Client(url=get_vault_settings().url, session=self._get_session())
+        client = Client(url=get_vault_settings().url, session=get_session())
         client.auth.azure.login(
             self.role,
             ps_access_token.accessToken,
@@ -89,7 +88,7 @@ class JWTAuthMethod(AbstractVaultAuthMethod):
     token: SecretStr
 
     def get_authorized_client(self) -> Client:
-        client = Client(url=get_vault_settings().url, session=self._get_session())
+        client = Client(url=get_vault_settings().url, session=get_session())
         client.auth.jwt.jwt_login(
             role=self.role,
             jwt=self.token.get_secret_value(),
@@ -106,7 +105,7 @@ class K8sAuthMethod(AbstractVaultAuthMethod):
     mount_point: str
 
     def get_authorized_client(self) -> Client:
-        client = Client(url=get_vault_settings().url, session=self._get_session())
+        client = Client(url=get_vault_settings().url, session=get_session())
         client.auth.kubernetes.login(
             self.role,
             self._get_token(),
@@ -185,10 +184,6 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
         if not vault_settings.enabled:
             return {}
 
-        secret_path = self.settings_cls.__secret_path__
-        if secret_path is None:
-            raise ValueError("`secret_path` must be specified")
-
         auth_method_cls: type[AbstractVaultAuthMethod] | None = None
 
         if vault_settings.auth_method is not None:
@@ -205,8 +200,10 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
         else:
             client = auth_method_cls().get_authorized_client()
 
+        assert issubclass(self.settings_cls, VaultBaseSettings)
+
         return client.secrets.kv.v2.read_secret_version(
-            self.settings_cls.__secret_path__,
+            self.settings_cls.secret_path,
             mount_point=get_env_settings().env,
             raise_on_deleted_version=True,
         )["data"]["data"]
@@ -231,21 +228,13 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
         return data
 
 
-class BaseSettingsMetaclass(ModelMetaclass):
-    def __new__(
-        mcs,
-        name: str,
-        bases: tuple[type, ...],
-        namespace: dict[str, Any],
-        **kwargs: Any,
-    ) -> type:
-        secret_path = kwargs.pop("secret_path", None)
-        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
-        cls.__secret_path__ = secret_path
-        return cls
+class VaultBaseSettings(BaseSettings):
+    secret_path: ty.ClassVar[str]
 
+    def __init_subclass__(cls, /, secret_path: str, **kwargs: ty.Any) -> None:
+        super().__init_subclass__(**kwargs)
+        cls.secret_path = secret_path
 
-class VaultBaseSettings(BaseSettings, metaclass=BaseSettingsMetaclass):
     @classmethod
     def settings_customise_sources(
         cls,
