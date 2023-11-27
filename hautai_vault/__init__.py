@@ -141,7 +141,7 @@ def register_vault_auth_method(
 
 
 class EnvSettings(BaseSettings):
-    ENV: str = "dev"
+    env: str = "dev"
 
     class Config:
         env_file: str = ".env"
@@ -207,7 +207,7 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
 
         return client.secrets.kv.v2.read_secret_version(
             self.settings_cls.__secret_path__,
-            mount_point=get_env_settings().ENV,
+            mount_point=get_env_settings().env,
             raise_on_deleted_version=True,
         )["data"]["data"]
 
