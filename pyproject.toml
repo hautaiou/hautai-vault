@@ -1,16 +1,17 @@
 [tool.poetry]
 name = "hautai_vault"
-version = "2.7.0"
+version = "3.0.0"
 description = "A library providing means to interact with Hashicorp Vault"
-authors = ["Fedor Eremeev <f.eremeev@haut.ai>"]
+authors = ["Fedor Eremeev <f.eremeev@haut.ai>", "Dmitrii Trofimov <d.trofimov@haut.ai>"]
 repository = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload"
 packages = [{ include = "hautai_vault" }]
 exclude = ["**/tests"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-pydantic = { version = "^1.10.6", extras = ["dotenv"] }
+pydantic = "^2"
 hvac = "^1.1.0"
+pydantic-settings = "^2"
 
 [tool.poetry.group.formatters.dependencies]
 black = "^23.1.0"
