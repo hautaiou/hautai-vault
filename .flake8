@@ -2,8 +2,8 @@
 format = pylint
 inline-quotes = double
 max-complexity = 10
-max-doc-length = 79
-max-line-length = 88
+max-doc-length = 120
+max-line-length = 120
 
 extend-exclude =
     # IDEs
