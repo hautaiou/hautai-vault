@@ -12,8 +12,7 @@ from hvac import Client
 from pydantic import BaseModel, Field, SecretStr
 from pydantic._internal._model_construction import ModelMetaclass
 from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings as PydanticBaseSettings
-from pydantic_settings import PydanticBaseSettingsSource
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -39,7 +38,7 @@ def get_session(
     return session
 
 
-class AbstractVaultAuthMethod(PydanticBaseSettings):
+class AbstractVaultAuthMethod(BaseSettings):
     role: str = Field(..., alias="VAULT_AUTH_ROLE")
 
     @abc.abstractmethod
@@ -141,7 +140,7 @@ def register_vault_auth_method(
     _VAULT_AUTH_METHODS[auth_method] = auth_method_class
 
 
-class EnvSettings(PydanticBaseSettings):
+class EnvSettings(BaseSettings):
     ENV: str = "dev"
 
     class Config:
@@ -158,7 +157,7 @@ def get_env_settings() -> EnvSettings:
     return _env_settings  # noqa: R504
 
 
-class VaultSettings(PydanticBaseSettings):
+class VaultSettings(BaseSettings):
     enabled: bool = True
     url: str = "https://vault.infra.haut.ai"
     auth_method: str | None = None
@@ -246,11 +245,11 @@ class BaseSettingsMetaclass(ModelMetaclass):
         return cls
 
 
-class BaseSettings(PydanticBaseSettings, metaclass=BaseSettingsMetaclass):
+class VaultBaseSettings(BaseSettings, metaclass=BaseSettingsMetaclass):
     @classmethod
     def settings_customise_sources(
         cls,
-        settings_cls: type[PydanticBaseSettings],
+        settings_cls: type[BaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
@@ -275,7 +274,7 @@ if __name__ == "__main__":
     # os.environ.setdefault("VAULT_AUTH_METHOD", "azure")  # noqa: E800
     os.environ.setdefault("VAULT_AUTH_ROLE", "constructor-dev")
 
-    class Settings(BaseSettings, secret_path="sasuke/backend/constructor"):
+    class Settings(VaultBaseSettings, secret_path="sasuke/backend/constructor"):
         API_URL: str
         WEATHERBIT_API_KEY: str
 
