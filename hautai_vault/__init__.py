@@ -138,28 +138,11 @@ def register_vault_auth_method(
     _VAULT_AUTH_METHODS[auth_method] = auth_method_class
 
 
-class EnvSettings(BaseSettings):
-    env: str = "dev"
-
-    class Config:
-        extra = "allow"
-        env_file: str = ".env"
-
-
-_env_settings: EnvSettings | None = None
-
-
-def get_env_settings() -> EnvSettings:
-    global _env_settings
-    if _env_settings is None:
-        _env_settings = EnvSettings()
-    return _env_settings  # noqa: R504
-
-
 class VaultSettings(BaseSettings):
     enabled: bool = True
     url: str = "https://vault.infra.haut.ai"
     auth_method: str | None = None
+    mount_point: str = "dev"
 
     class Config:
         extra = "allow"
@@ -205,7 +188,7 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
 
         return client.secrets.kv.v2.read_secret_version(
             self.settings_cls.secret_path,
-            mount_point=get_env_settings().env,
+            mount_point=vault_settings.mount_point,
             raise_on_deleted_version=True,
         )["data"]["data"]
 
@@ -268,7 +251,7 @@ if __name__ == "__main__":
 
     os.environ.setdefault("VAULT_ENABLED", "1")
     # os.environ.setdefault("VAULT_AUTH_METHOD", "azure")  # noqa: E800
-    os.environ.setdefault("VAULT_AUTH_ROLE", "constructor-dev")
+    # os.environ.setdefault("VAULT_AUTH_ROLE", "constructor-dev")
 
     class Settings(VaultBaseSettings, secret_path="sasuke/backend/constructor"):
         API_URL: str
