@@ -68,7 +68,7 @@ class AzureAuthMethod(AbstractVaultAuthMethod):
             check=True,
         )
 
-        ps_access_token = PSAccessToken.model_validate(ret.stdout)
+        ps_access_token = PSAccessToken.model_validate_json(ret.stdout)
 
         client = Client(url=get_vault_settings().url, session=get_session())
         client.auth.azure.login(
