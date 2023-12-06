@@ -1,0 +1,35 @@
+name: CI
+on:
+  push:
+    tags:
+      - '*'           # Push events to every tag not containing /
+    branches:
+      - "dev"
+      - "test"
+      - "master"
+      - "ulta-sandbox"
+      - "ulta-prod"
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - ready_for_review
+  workflow_dispatch:
+jobs:
+  CI:
+    if: github.event_name == "push" ||  ${{ !contains( fromJSON('["dev", "test", "master", "ulta-sandbox", "ulta-prod"]'), github.head_ref ) }}
+    uses: hautaiou/infra-workflows/.github/workflows/saas-default-workflow.yaml@SAAS-4562-ci-build-python-libs
+    with:
+      vault-role: github-saas
+      context: ./
+      tests-directory: ./
+      disable-deploy: true
+      disable-build: true
+      disable-tests: true
+      enable-tests-cache: false
+      tests-workers: 0
+    secrets: inherit
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
