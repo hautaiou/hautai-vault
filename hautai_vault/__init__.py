@@ -116,9 +116,7 @@ class K8sAuthMethod(AbstractVaultAuthMethod):
         try:
             return Path(self.token_path).read_text().strip()
         except FileNotFoundError as e:
-            raise ValueError(
-                f"Kubernetes service account signed jwt at `{self.token_path}` is not found!"
-            ) from e
+            raise ValueError(f"Kubernetes service account signed jwt at `{self.token_path}` is not found!") from e
 
     class Config:
         env_prefix = "VAULT_AUTH_K8S_"
@@ -174,9 +172,7 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
             try:
                 auth_method_cls = _VAULT_AUTH_METHODS[vault_settings.auth_method]
             except KeyError as e:
-                raise ValueError(
-                    f"Vault auth method `{vault_settings.auth_method}` is not supported"
-                ) from e
+                raise ValueError(f"Vault auth method `{vault_settings.auth_method}` is not supported") from e
 
         if auth_method_cls is None:
             # Default auth method is by token (VAULT_TOKEN env var or ~/.vault-token)
@@ -192,26 +188,18 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
             raise_on_deleted_version=True,
         )["data"]["data"]
 
-    def prepare_field_value(
-        self, field_name: str, field: FieldInfo, value: ty.Any, value_is_complex: bool
-    ) -> ty.Any:
+    def prepare_field_value(self, field_name: str, field: FieldInfo, value: ty.Any, value_is_complex: bool) -> ty.Any:
         return value
 
-    def get_field_value(
-        self, field: FieldInfo, field_name: str
-    ) -> tuple[ty.Any, str, bool]:
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[ty.Any, str, bool]:
         field_value = self._secrets.get(field_name)
         return field_value, field_name, False
 
     def __call__(self) -> dict[str, ty.Any]:
         data = {}
         for field_name, field in self.settings_cls.model_fields.items():
-            field_value, field_key, value_is_complex = self.get_field_value(
-                field, field_name
-            )
-            field_value = self.prepare_field_value(
-                field_name, field, field_value, value_is_complex
-            )
+            field_value, field_key, value_is_complex = self.get_field_value(field, field_name)
+            field_value = self.prepare_field_value(field_name, field, field_value, value_is_complex)
             if field_value is not None:
                 data[field_key] = field_value
         return data

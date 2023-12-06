@@ -1,0 +1,23 @@
+default_install_hook_types:
+  - pre-commit
+  - prepare-commit-msg
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: "v4.5.0"
+    hooks:
+      - id: check-added-large-files
+      - id: check-merge-conflict
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.7.1"
+    hooks:
+      - id: mypy
+        pass_filenames: false
+  - repo: git@gitlab.com:haut.ai-team/infra/pre-commit-hooks.git
+    rev: 704d2103f94d5eb04543848834b0836e44dd1bc2
+    hooks:
+      - id: add-msg-issue-prefix          
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: 'v0.1.7'
+    hooks:
+      - id: ruff
+        args: ["--fix", "--exit-non-zero-on-fix"]
