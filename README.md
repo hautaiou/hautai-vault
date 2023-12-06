@@ -1,3 +1,5 @@
+[![CI](https://github.com/hautaiou/saas-backend-libs-vault/actions/workflows/main.yml/badge.svg)](https://github.com/hautaiou/saas-backend-libs-vault/actions/workflows/main.yml)
+
 # Vault
 
 An internal Hashicorp Vault Python library for backend services.
