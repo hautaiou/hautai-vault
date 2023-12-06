@@ -1,14 +1,7 @@
 name: CI
 on:
   push:
-    tags:
-      - '*'           # Push events to every tag not containing /
-    branches:
-      - "dev"
-      - "test"
-      - "master"
-      - "ulta-sandbox"
-      - "ulta-prod"
+    tags: ["*.*.*"]
   pull_request:
     types:
       - opened
