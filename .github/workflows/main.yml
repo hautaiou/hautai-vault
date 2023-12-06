@@ -17,7 +17,8 @@ jobs:
       context: ./
       tests-directory: ./tests
       disable-deploy: true
-      disable-build: true
+      disable-build-docker: true
+      disable-build-wheel: false
       tests-workers: 0
     secrets: inherit
     permissions:
