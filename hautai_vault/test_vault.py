@@ -1,0 +1,3 @@
+def test_vault():
+    """How caw we test vault client in CI? Should we mock it?"""
+    ...
