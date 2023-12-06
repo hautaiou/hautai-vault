@@ -15,10 +15,9 @@ jobs:
     with:
       vault-role: github-saas
       context: ./
-      tests-directory: ./
+      tests-directory: ./tests
       disable-deploy: true
       disable-build: true
-      disable-tests: true
       enable-tests-cache: false
       tests-workers: 0
     secrets: inherit
