@@ -18,7 +18,6 @@ jobs:
       tests-directory: ./tests
       disable-deploy: true
       disable-build: true
-      enable-tests-cache: false
       tests-workers: 0
     secrets: inherit
     permissions:
