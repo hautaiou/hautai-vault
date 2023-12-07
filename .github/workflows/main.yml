@@ -11,7 +11,7 @@ on:
 jobs:
   CI:
     if: github.event_name == "push" ||  ${{ !contains( fromJSON('["dev", "test", "master", "ulta-sandbox", "ulta-prod"]'), github.head_ref ) }}
-    uses: hautaiou/infra-workflows/.github/workflows/saas-default-workflow.yaml@SAAS-4562-ci-build-python-libs
+    uses: hautaiou/infra-workflows/.github/workflows/saas-default-workflow.yaml@main
     with:
       vault-role: github-saas
       context: ./
