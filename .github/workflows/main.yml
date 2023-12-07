@@ -1,0 +1,27 @@
+name: CI
+on:
+  push:
+    tags: ["*.*.*"]
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - ready_for_review
+  workflow_dispatch:
+jobs:
+  CI:
+    if: github.event_name == "push" ||  ${{ !contains( fromJSON('["dev", "test", "master", "ulta-sandbox", "ulta-prod"]'), github.head_ref ) }}
+    uses: hautaiou/infra-workflows/.github/workflows/saas-default-workflow.yaml@main
+    with:
+      vault-role: github-saas
+      context: ./
+      tests-directory: ./tests
+      disable-deploy: true
+      disable-build-docker: true
+      disable-build-wheel: false
+      tests-workers: 0
+    secrets: inherit
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
