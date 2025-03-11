@@ -18,3 +18,9 @@ venv/
 */.ipynb_checkpoints/*
 .idea/
 .pymon
+
+# Ignore everything in .vscode
+.vscode/*
+
+# Except settings.json
+!.vscode/settings.json
