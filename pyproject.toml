@@ -14,7 +14,7 @@ hvac = "^2.0.0"
 pydantic-settings = "^2.1.0"
 
 [tool.poetry.group.linters.dependencies]
-ruff = "^0.1.7"
+ruff = "^0.10.0"
 mypy = "^1.7.1"
 
 [tool.poetry.group.shell.dependencies]
