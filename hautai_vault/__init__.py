@@ -10,7 +10,7 @@ import requests
 from hvac import Client
 from pydantic import BaseModel, Field, SecretStr
 from pydantic.fields import FieldInfo
-from pydantic_settings import BaseSettings, PydanticBaseSettingsSource
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -43,8 +43,7 @@ class AbstractVaultAuthMethod(BaseSettings):
     def get_authorized_client(self) -> Client:
         pass
 
-    class Config:
-        env_file: str = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 # https://learn.microsoft.com/en-us/dotnet/api/microsoft.azure.commands.profile.models.psaccesstoken?view=az-ps-latest
@@ -78,8 +77,7 @@ class AzureAuthMethod(AbstractVaultAuthMethod):
         )
         return client
 
-    class Config:
-        env_prefix = "VAULT_AUTH_AZURE_"
+    model_config = SettingsConfigDict(env_prefix="VAULT_AUTH_AZURE_")
 
 
 class JWTAuthMethod(AbstractVaultAuthMethod):
@@ -95,8 +93,7 @@ class JWTAuthMethod(AbstractVaultAuthMethod):
         )
         return client
 
-    class Config:
-        env_prefix = "VAULT_AUTH_JWT_"
+    model_config = SettingsConfigDict(env_prefix="VAULT_AUTH_JWT_")
 
 
 class K8sAuthMethod(AbstractVaultAuthMethod):
@@ -118,8 +115,7 @@ class K8sAuthMethod(AbstractVaultAuthMethod):
         except FileNotFoundError as e:
             raise ValueError(f"Kubernetes service account signed jwt at `{self.token_path}` is not found!") from e
 
-    class Config:
-        env_prefix = "VAULT_AUTH_K8S_"
+    model_config = SettingsConfigDict(env_prefix="VAULT_AUTH_K8S_")
 
 
 _VAULT_AUTH_METHODS: dict[str, type[AbstractVaultAuthMethod]] = {
@@ -142,10 +138,7 @@ class VaultSettings(BaseSettings):
     auth_method: str | None = None
     mount_point: str = "dev"
 
-    class Config:
-        extra = "allow"
-        env_file: str = ".env"
-        env_prefix = "VAULT_"
+    model_config = SettingsConfigDict(extra="allow", env_file=".env", env_prefix="VAULT_")
 
 
 _vault_settings: VaultSettings | None = None
@@ -229,9 +222,7 @@ class VaultBaseSettings(BaseSettings):
             file_secret_settings,
         )
 
-    class Config:
-        extra = "allow"
-        env_file: str = ".env"
+    model_config = SettingsConfigDict(extra="allow", env_file=".env")
 
 
 if __name__ == "__main__":
