@@ -1,0 +1,42 @@
+[project]
+name = "hautai-vault"
+version = "1.0.0"
+description = "Library to fetch secrets from HashiCorp Vault to Pydantic settings"
+readme = "README.md"
+authors = [
+    { name = "Fedor Eremeev", email = "f.eremeev@haut.ai" },
+    { name = "Dmitrii Trofimov", email = "d.trofimov@haut.ai" },
+]
+requires-python = ">=3.11"
+dependencies = [
+    "hvac>=2.3.0",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+    "requests>=2.32.4",
+]
+
+[project.scripts]
+hautai-vault = "hautai_vault:main"
+
+[build-system]
+requires = ["uv_build>=0.8.0,<0.9"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.5",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["ALL"]
+extend-ignore = [
+    "D",
+    "ANN401",
+    "ARG002",
+    "FBT",
+    "S101",
+]
