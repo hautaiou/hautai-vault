@@ -76,7 +76,7 @@ class AzureAuthMethod(AbstractVaultAuthMethod):
         client = Client(url=get_vault_settings().url, session=get_session())
         client.auth.azure.login(
             self.role,
-            ps_access_token.accessToken,
+            ps_access_token.access_token,
             mount_point=self.mount_point,
         )
         return client
@@ -139,17 +139,29 @@ def register_vault_auth_method(
     _VAULT_AUTH_METHODS[auth_method] = auth_method_class
 
 
-class VaultSettings(BaseSettings):
-    enabled: bool = True
-    url: str
-    auth_method: str | None = None
-    mount_point: str = "dev"
-
+class VaultBaseConfig(BaseSettings):
     model_config = SettingsConfigDict(
         extra="allow",
         env_file=".env",
         env_prefix="VAULT_",
     )
+
+
+class VaultBasicSettings(VaultBaseConfig):
+    enabled: bool = True
+
+
+class VaultSettings(VaultBasicSettings):
+    enabled: bool = True
+    url: str
+    auth_method: str | None = None
+    mount_point: str = "dev"
+
+
+@cache
+def is_vault_enabled() -> bool:
+    """Check if Vault is enabled."""
+    return VaultBasicSettings().enabled
 
 
 @cache
@@ -160,13 +172,12 @@ def get_vault_settings() -> VaultSettings:
 class VaultSettingsSource(PydanticBaseSettingsSource):
     @cached_property
     def _secrets(self) -> dict[str, ty.Any]:
-        vault_settings = get_vault_settings()
-
-        if not vault_settings.enabled:
+        if not is_vault_enabled():
             return {}
 
         auth_method_cls: type[AbstractVaultAuthMethod] | None = None
 
+        vault_settings = get_vault_settings()
         if vault_settings.auth_method is not None:
             try:
                 auth_method_cls = _VAULT_AUTH_METHODS[vault_settings.auth_method]
