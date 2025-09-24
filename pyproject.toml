@@ -133,14 +133,12 @@ select = [
     "RUF",
     "G",
 ]
-exclude = [
-    "tests/*.py",
-    "tests",
-    "test_*.py",
-    "snippets/*.py",
-    "skingpt_notebook/*.ipynb",
+[tool.ruff.lint.per-file-ignores]
+"tests/test_vault.py" = [
+    "EM101",
+    "S105",
+    "TRY003",
 ]
-
 [tool.ruff.lint.pep8-naming]
 classmethod-decorators = [
     "classmethod",
@@ -148,29 +146,6 @@ classmethod-decorators = [
     "pydantic.root_validator",
     "root_validator",
 ]
-
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["E402"]
-"hautai/saas/algorithms/skingpt/skingpt/algorithm.py" = ["PLR0912"]
-"test_*.py" = [
-    "S101",
-    "ANN201",
-    "ARG001",
-    "ANN001",
-    "ANN201",
-    "ANN202",
-    "ANN201",
-]
-"conftest.py" = [
-    "S101",
-    "ANN201",
-    "ARG001",
-    "ANN001",
-    "ANN201",
-    "ANN202",
-    "ANN201",
-]
-"**/scripts/*.py" = ["T201"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

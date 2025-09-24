@@ -36,10 +36,11 @@ Guidance for AI coding agents working in this repository. Keep this file the sou
 - **`VaultSettingsSource`**: Custom Pydantic source that reads secrets from a KV v2 engine. Evaluation order: environment → `.env` → init kwargs → Vault → file secrets.
 - **`VaultSettings`**: Global configuration read once (cached) from environment; controls whether Vault is enabled, URL, auth method, and mount point.
 - **`register_vault_auth_method`**: Extension hook for registering new authentication strategies beyond the built-ins.
+- **`PSAccessToken`**: Pydantic model that normalises Azure CLI response fields to snake_case while preserving camelCase attribute access for backwards compatibility—keep the alias map and `__getattr__` bridge intact when editing.
 
 ### Authentication Strategies
 - `jwt` (`JWTAuthMethod`): expects `VAULT_AUTH_JWT_TOKEN`, optional `VAULT_AUTH_JWT_PATH`.
-- `azure` (`AzureAuthMethod`): shells out to `az account get-access-token`; mount point defaults to `azure`.
+- `azure` (`AzureAuthMethod`): resolves the absolute `az` executable via `shutil.which` before shelling out to `az account get-access-token`; mount point defaults to `azure` and raises a clear error if the CLI is unavailable.
 - `k8s` (`K8sAuthMethod`): reads a service account token from `VAULT_AUTH_K8S_TOKEN_PATH`, authenticates against the configured mount point.
 - Token auth fallback: if `VAULT_AUTH_METHOD` unset, `hvac.Client` relies on `VAULT_TOKEN` or `~/.vault-token`.
 
@@ -61,7 +62,7 @@ settings = Settings()
 The first instantiation pulls secrets from Vault unless disabled or overridden by environment/init values.
 
 ## Testing Notes
-- Tests mock external Vault access by monkeypatching `hautai_vault.Client` with dummy hvac clients; never attempt live Vault calls in CI.
+- Tests mock external Vault access by monkeypatching `hautai_vault.Client` with dummy hvac clients; never attempt live Vault calls in CI. `tests/test_vault.py` contains a regression test asserting camelCase access on `PSAccessToken` remains functional.
 - Run locally via `uv run pytest --cov=hautai_vault --cov-report=term-missing` after installing dependencies.
 - Prefer fast unit tests; integration tests should be gated or skipped by default.
 
@@ -70,6 +71,7 @@ The first instantiation pulls secrets from Vault unless disabled or overridden b
 - Update or add tests alongside behavioural changes.
 - Document new environment variables or auth flows here and in `README.md` (when that file is modernised).
 - Avoid committing secrets; rely on Vault for runtime secrets.
+- Ruff has per-file ignores for `tests/test_vault.py` covering `EM101`, `S105`, and `TRY003`; keep them limited to this file unless additional test-only exceptions are justified.
 
 ## Troubleshooting
 - Azure auth requires the Azure CLI to be logged in (`az login`).

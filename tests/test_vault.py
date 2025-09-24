@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import sys
 from types import ModuleType, SimpleNamespace
 import typing as ty
-
-import sys
 
 import pytest
 
