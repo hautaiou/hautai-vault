@@ -2,12 +2,12 @@ import abc
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-import shlex
+import shutil
 import subprocess  # noqa: S404
 import typing as ty
 
 from hvac import Client
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 import requests
@@ -48,11 +48,25 @@ class AbstractVaultAuthMethod(BaseSettings):
 
 # https://learn.microsoft.com/en-us/dotnet/api/microsoft.azure.commands.profile.models.psaccesstoken?view=az-ps-latest
 class PSAccessToken(BaseModel):
-    accessToken: str
-    expiresOn: datetime
+    access_token: str = Field(alias="accessToken")
+    expires_on: datetime = Field(alias="expiresOn")
     subscription: str
     tenant: str
-    tokenType: str
+    token_type: str = Field(alias="tokenType")
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    _LEGACY_ATTRIBUTE_MAP: ty.ClassVar[dict[str, str]] = {
+        "accessToken": "access_token",
+        "expiresOn": "expires_on",
+        "tokenType": "token_type",
+    }
+
+    def __getattr__(self, item: str) -> ty.Any:
+        legacy_map = type(self)._LEGACY_ATTRIBUTE_MAP
+        if item in legacy_map:
+            return object.__getattribute__(self, legacy_map[item])
+        raise AttributeError(item)
 
 
 class AzureAuthMethod(AbstractVaultAuthMethod):
@@ -60,9 +74,13 @@ class AzureAuthMethod(AbstractVaultAuthMethod):
 
     def get_authorized_client(self) -> Client:
         # https://learn.microsoft.com/en-us/powershell/module/az.accounts/get-azaccesstoken?view=azps-11.0.0
-        ret = subprocess.run(
-            shlex.join(split_command=["az", "account", "get-access-token"]),
-            shell=True,  # noqa: S602
+        az_cli = shutil.which("az")
+        if az_cli is None:
+            msg = "Azure CLI executable `az` is not available on PATH"
+            raise RuntimeError(msg)
+
+        ret = subprocess.run(  # noqa: S603 - command arguments are static and trusted
+            [az_cli, "account", "get-access-token"],
             capture_output=True,
             check=True,
         )
@@ -72,7 +90,7 @@ class AzureAuthMethod(AbstractVaultAuthMethod):
         client = Client(url=get_vault_settings().url, session=get_session())
         client.auth.azure.login(
             self.role,
-            ps_access_token.accessToken,
+            ps_access_token.access_token,
             mount_point=self.mount_point,
         )
         return client
@@ -97,7 +115,10 @@ class JWTAuthMethod(AbstractVaultAuthMethod):
 
 
 class K8sAuthMethod(AbstractVaultAuthMethod):
-    token_path: str = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    token_path: str = Field(
+        default="/var/run/secrets/kubernetes.io/serviceaccount/token",
+        description="Filesystem path to the Kubernetes service account token used for Vault auth.",
+    )
     mount_point: str
 
     def get_authorized_client(self) -> Client:
@@ -110,10 +131,11 @@ class K8sAuthMethod(AbstractVaultAuthMethod):
         return client
 
     def _get_token(self) -> str:
-        try:
-            return Path(self.token_path).read_text().strip()
-        except FileNotFoundError as e:
-            raise ValueError(f"Kubernetes service account signed jwt at `{self.token_path}` is not found!") from e
+        token_path = Path(self.token_path)
+        if not token_path.exists():
+            msg = f"Kubernetes service account signed jwt at `{token_path}` is not found!"
+            raise ValueError(msg)
+        return token_path.read_text().strip()
 
     model_config = SettingsConfigDict(env_prefix="VAULT_AUTH_K8S_")
 
@@ -145,10 +167,11 @@ _vault_settings: VaultSettings | None = None
 
 
 def get_vault_settings() -> VaultSettings:
-    global _vault_settings
-    if _vault_settings is None:
-        _vault_settings = VaultSettings()
-    return _vault_settings  # noqa: RET504
+    settings = globals().get("_vault_settings")
+    if settings is None:
+        settings = VaultSettings()
+        globals()["_vault_settings"] = settings
+    return ty.cast(VaultSettings, settings)
 
 
 class VaultSettingsSource(PydanticBaseSettingsSource):
@@ -162,10 +185,10 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
         auth_method_cls: type[AbstractVaultAuthMethod] | None = None
 
         if vault_settings.auth_method is not None:
-            try:
-                auth_method_cls = _VAULT_AUTH_METHODS[vault_settings.auth_method]
-            except KeyError as e:
-                raise ValueError(f"Vault auth method `{vault_settings.auth_method}` is not supported") from e
+            auth_method_cls = _VAULT_AUTH_METHODS.get(vault_settings.auth_method)
+            if auth_method_cls is None:
+                msg = f"Vault auth method `{vault_settings.auth_method}` is not supported"
+                raise ValueError(msg)
 
         if auth_method_cls is None:
             # Default auth method is by token (VAULT_TOKEN env var or ~/.vault-token)
@@ -229,8 +252,6 @@ if __name__ == "__main__":
     import os
 
     os.environ.setdefault("VAULT_ENABLED", "1")
-    # os.environ.setdefault("VAULT_AUTH_METHOD", "azure")  # noqa: E800
-    # os.environ.setdefault("VAULT_AUTH_ROLE", "constructor-dev")
 
     class Settings(VaultBaseSettings, secret_path="sasuke/backend/constructor"):
         API_URL: str

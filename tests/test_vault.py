@@ -117,3 +117,20 @@ def test_custom_auth_method_used(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert DummyAuth.called == 1
     assert settings.API_KEY == "from-custom-auth"
+
+
+def test_ps_access_token_legacy_attribute_access() -> None:
+    token_payload = {
+        "accessToken": "token-value",
+        "expiresOn": "2024-12-31T23:59:59Z",
+        "subscription": "sub",
+        "tenant": "tenant",
+        "tokenType": "Bearer",
+    }
+
+    token = hautai_vault.PSAccessToken.model_validate(token_payload)
+
+    assert token.access_token == "token-value"
+    assert token.accessToken == "token-value"
+    assert token.token_type == "Bearer"
+    assert token.tokenType == "Bearer"
