@@ -1,91 +1,78 @@
-# CLAUDE.md
+# AGENTS
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for AI coding agents working in this repository. Keep this file the source of truth when assisting developers so that all tools share the same mental model of the project.
 
-## Project Overview
+## Repository Snapshot
+- `hautai_vault/__init__.py`: the full implementation of the Vault client integration (authentication flows, settings source, helper utilities).
+- `tests/`: ready for future automated tests; currently only contains scaffolding.
+- `pyproject.toml`: dependency, linting, and packaging metadata (Poetry, Ruff, MyPy).
+- `Makefile`: convenience targets for formatting, linting, testing, packaging, and publishing.
+- `README.md`: legacy placeholder from the original GitLab template (do not rely on it for accurate instructions).
 
-This is `hautai_vault`, a Python library that provides a unified interface for interacting with HashiCorp Vault. It's designed as an internal library for backend services and handles authentication and secret retrieval from Vault.
+## Environment & Tooling
+- Supported Python: `^3.9` (enforced by Poetry).
+- Dependency management: Poetry; preferred workflow is to create a virtualenv with `poetry install`.
+- Linting & formatting: Ruff (`ruff check`, `ruff format`), line length 120.
+- Static typing: MyPy with the Pydantic plugin.
+- Test framework: Pytest (with pytest-cov and pytest-xdist available).
 
-## Development Commands
+### Installation
+- `poetry install` – install all dependencies including dev and test groups.
+- `poetry install --group dev` – install runtime + developer extras only.
+- `poetry install --without dev tests` – install production dependencies (alternative to the broken `make install_requirements`).
 
-### Installation and Setup
-```bash
-# Install all dependencies including dev tools
-poetry install
+### Quality Commands (Makefile)
+- `make format` → `ruff check --fix` followed by `ruff format`.
+- `make lint` → `ruff check --fix` (CI expects zero lint warnings).
+- `make run_tests` → `pytest -svvv --log-cli-level=DEBUG tests/`.
+- `make pre_push_test` → runs format, lint, tests, and security analysis (placeholder target `analyse_security`).
 
-# Install only production dependencies
-poetry install --exclude dev
-```
+### Packaging
+- `make build_wheel` → `poetry build --skip-existing`.
+- `make push_wheel_to_repo` → `poetry publish --build --skip-existing -r haut_ai_publish -vvv --no-interaction` (requires Azure DevOps credentials).
 
-### Code Quality and Testing
-```bash
-# Format and lint code
-make format          # Format code with ruff
-make lint           # Check code with ruff (must be 0 warnings for CI)
+## Core Library Architecture
+- **`VaultBaseSettings`**: Base class that injects `VaultSettingsSource` into Pydantic’s settings pipeline. Subclasses must provide `secret_path` via class definition (`class Settings(VaultBaseSettings, secret_path="my/path"):`).
+- **`VaultSettingsSource`**: Custom Pydantic source that reads secrets from a KV v2 engine. Evaluation order: environment → `.env` → init kwargs → Vault → file secrets.
+- **`VaultSettings`**: Global configuration read once (cached) from environment; controls whether Vault is enabled, URL, auth method, and mount point.
+- **`register_vault_auth_method`**: Extension hook for registering new authentication strategies beyond the built-ins.
 
-# Run tests
-make run_tests      # Run pytest with verbose output
-pytest -svvv --log-cli-level=DEBUG tests/
+### Authentication Strategies
+- `jwt` (`JWTAuthMethod`): expects `VAULT_AUTH_JWT_TOKEN`, optional `VAULT_AUTH_JWT_PATH`.
+- `azure` (`AzureAuthMethod`): shells out to `az account get-access-token`; mount point defaults to `azure`.
+- `k8s` (`K8sAuthMethod`): reads a service account token from `VAULT_AUTH_K8S_TOKEN_PATH`, authenticates against the configured mount point.
+- Token auth fallback: if `VAULT_AUTH_METHOD` unset, `hvac.Client` relies on `VAULT_TOKEN` or `~/.vault-token`.
 
-# Pre-push validation
-make pre_push_test  # Runs format, lint, tests, and security analysis
-```
+### Default Configuration
+- Vault URL: `https://vault.infra.haut.ai`.
+- Default KV mount: `dev`.
+- Global toggle: `VAULT_ENABLED` (defaults to `True`).
 
-### Build and Publishing
-```bash
-# Build wheel package
-make build_wheel    # Uses poetry build
-
-# Publish to repository (CI use)
-make push_wheel_to_repo
-```
-
-## Architecture
-
-The library provides a settings integration for Pydantic that automatically retrieves secrets from HashiCorp Vault. Key architectural components:
-
-### Authentication Methods
-- **JWT Authentication** (`JWTAuthMethod`): Uses JWT tokens for authentication
-- **Azure Authentication** (`AzureAuthMethod`): Uses Azure CLI access tokens via `az account get-access-token`
-- **Kubernetes Authentication** (`K8sAuthMethod`): Uses Kubernetes service account tokens
-- **Token Authentication**: Default method using VAULT_TOKEN env var or ~/.vault-token
-
-### Core Classes
-- `VaultBaseSettings`: Base class for settings that integrate with Vault. Subclasses must specify a `secret_path` class variable
-- `VaultSettingsSource`: Custom Pydantic settings source that retrieves values from Vault KV v2 engine
-- `AbstractVaultAuthMethod`: Base class for implementing custom authentication methods
-
-### Usage Pattern
+### Example Usage
 ```python
+from hautai_vault import VaultBaseSettings
+
 class Settings(VaultBaseSettings, secret_path="sasuke/backend/service-name"):
     API_KEY: str
     DATABASE_URL: str
 
-settings = Settings()  # Automatically retrieves secrets from Vault
+settings = Settings()
 ```
+The first instantiation pulls secrets from Vault unless disabled or overridden by environment/init values.
 
-## Configuration
+## Testing Notes
+- Unit test coverage is currently minimal (see `tests/test_vault.py`). Tests must mock external Vault access; CI has no Vault instance.
+- Prefer fast unit tests; integration tests should be gated or skipped by default.
 
-- Uses Poetry for dependency management
-- Ruff for linting and formatting (line length: 120)
-- MyPy for type checking with Pydantic plugin
-- Default Vault URL: `https://vault.infra.haut.ai`
-- Default mount point: `dev`
+## When Making Changes
+- Follow Ruff auto-fixes, then re-run `make lint` to ensure a clean state.
+- Update or add tests alongside behavioural changes.
+- Document new environment variables or auth flows here and in `README.md` (when that file is modernised).
+- Avoid committing secrets; rely on Vault for runtime secrets.
 
-## Environment Variables
+## Troubleshooting
+- Azure auth requires the Azure CLI to be logged in (`az login`).
+- Kubernetes auth expects the service account token file to exist; otherwise the code raises a descriptive `ValueError`.
+- If `VAULT_ENABLED=0`, the settings source returns an empty dict and only env/init values are used.
 
-Key environment variables for Vault configuration:
-- `VAULT_ENABLED`: Enable/disable Vault integration (default: True)
-- `VAULT_URL`: Vault server URL
-- `VAULT_AUTH_METHOD`: Authentication method (jwt/azure/k8s)
-- `VAULT_AUTH_ROLE`: Role name for authentication
-- `VAULT_MOUNT_POINT`: KV mount point
-
-Authentication-specific variables:
-- JWT: `VAULT_AUTH_JWT_TOKEN`, `VAULT_AUTH_JWT_PATH`
-- Azure: `VAULT_AUTH_AZURE_MOUNT_POINT`
-- K8s: `VAULT_AUTH_K8S_TOKEN_PATH`, `VAULT_AUTH_K8S_MOUNT_POINT`
-
-## Testing
-
-Currently has minimal test coverage. The main test file (`tests/test_vault.py`) contains only a placeholder test questioning how to test Vault client integration in CI.
+Keep this file current whenever the project structure, tooling, or auth flows change so every agent starts from an accurate briefing.
