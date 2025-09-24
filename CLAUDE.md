@@ -5,31 +5,31 @@ Guidance for AI coding agents working in this repository. Keep this file the sou
 ## Repository Snapshot
 - `hautai_vault/__init__.py`: the full implementation of the Vault client integration (authentication flows, settings source, helper utilities).
 - `tests/`: pytest suite validating Vault settings behaviour with stubbed hvac clients (`tests/test_vault.py`).
-- `pyproject.toml`: dependency, linting, and packaging metadata (Poetry, Ruff, MyPy).
+- `pyproject.toml`: project metadata for uv/hatch build, dependency groups, Ruff, MyPy.
 - `Makefile`: convenience targets for formatting, linting, testing, packaging, and publishing.
 - `README.md`: legacy placeholder from the original GitLab template (do not rely on it for accurate instructions).
 
 ## Environment & Tooling
-- Supported Python: `^3.9` (enforced by Poetry).
-- Dependency management: Poetry; preferred workflow is to create a virtualenv with `poetry install`.
+- Supported Python: `>=3.9,<4` (declared in `pyproject.toml`).
+- Dependency management: uv (`uv sync` defaults to installing the `dev` group).
 - Linting & formatting: Ruff (`ruff check`, `ruff format`), line length 120.
 - Static typing: MyPy with the Pydantic plugin.
 - Test framework: Pytest (with pytest-cov and pytest-xdist available).
 
 ### Installation
-- `poetry install` – install all dependencies including dev and test groups.
-- `poetry install --group dev` – install runtime + developer extras only.
-- `poetry install --without dev tests` – install production dependencies (alternative to the broken `make install_requirements`).
+- `uv sync` – install runtime dependencies alongside the `dev` group.
+- `uv sync --no-group dev` – install runtime dependencies only.
+- Private Azure DevOps feeds are marked `explicit=true`; include them only when needed (e.g. `uv sync --index haut_ai`). Configure credentials beforehand or the request will 401.
 
 ### Quality Commands (Makefile)
-- `make format` → `ruff check --fix` followed by `ruff format`.
-- `make lint` → `ruff check --fix` (CI expects zero lint warnings).
-- `make run_tests` → `pytest -svvv --log-cli-level=DEBUG tests/`.
+- `make format` → `uv run ruff check --fix` then `uv run ruff format`.
+- `make lint` → `uv run ruff check --fix` (CI expects zero lint warnings).
+- `make run_tests` → `uv run pytest -svvv --log-cli-level=DEBUG tests/`.
 - `make pre_push_test` → runs format, lint, tests, and security analysis (placeholder target `analyse_security`).
 
 ### Packaging
-- `make build_wheel` → `poetry build --skip-existing`.
-- `make push_wheel_to_repo` → `poetry publish --build --skip-existing -r haut_ai_publish -vvv --no-interaction` (requires Azure DevOps credentials).
+- `make build_wheel` → `uv build --wheel --sdist`.
+- `make push_wheel_to_repo` → builds then calls `uv publish` against the Azure DevOps feed (set credentials first).
 
 ## Core Library Architecture
 - **`VaultBaseSettings`**: Base class that injects `VaultSettingsSource` into Pydantic’s settings pipeline. Subclasses must provide `secret_path` via class definition (`class Settings(VaultBaseSettings, secret_path="my/path"):`).
@@ -62,7 +62,7 @@ The first instantiation pulls secrets from Vault unless disabled or overridden b
 
 ## Testing Notes
 - Tests mock external Vault access by monkeypatching `hautai_vault.Client` with dummy hvac clients; never attempt live Vault calls in CI.
-- Run locally via `poetry run pytest --cov=hautai_vault --cov-report=term-missing` after installing dependencies.
+- Run locally via `uv run pytest --cov=hautai_vault --cov-report=term-missing` after installing dependencies.
 - Prefer fast unit tests; integration tests should be gated or skipped by default.
 
 ## When Making Changes

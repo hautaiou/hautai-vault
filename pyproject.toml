@@ -1,51 +1,51 @@
-[tool.poetry]
+[project]
 name = "hautai_vault"
 version = "4.0.0"
 description = "A library providing means to interact with Hashicorp Vault"
-authors = ["Fedor Eremeev <f.eremeev@haut.ai>", "Dmitrii Trofimov <d.trofimov@haut.ai>"]
-repository = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload"
-packages = [{ include = "hautai_vault" }]
-exclude = ["**/tests"]
+authors = [
+    { name = "Fedor Eremeev", email = "f.eremeev@haut.ai" },
+]
+requires-python = ">=3.9,<4"
+dependencies = [
+    "pydantic>=2.5.2,<3",
+    "hvac>=2.0.0,<3",
+    "pydantic-settings>=2.1.0,<3",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-pydantic = "^2.5.2"
-hvac = "^2.0.0"
-pydantic-settings = "^2.1.0"
+[project.urls]
+Repository = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload"
 
-[tool.poetry.group.linters.dependencies]
-ruff = "^0.10.0"
-mypy = "^1.7.1"
+[dependency-groups]
+dev = [
+    "ipython>=8.18.1,<9",
+    "mypy>=1.7.1,<2",
+    "pytest>=7.4.3,<8",
+    "pytest-cov>=4.1.0,<5",
+    "pytest-xdist>=3.5.0,<4",
+    "rich>=13.7.0,<14",
+    "ruff>=0.10.0,<0.11",
+]
 
-[tool.poetry.group.shell.dependencies]
-ipython = "^8.18.1"
-rich = "^13.7.0"
+[tool.uv]
+default-groups = ["dev"]
 
-[tool.poetry.group.tests.dependencies]
-pytest = "^7.4.3"
-pytest-cov = "^4.1.0"
-pytest-xdist = "^3.5.0"
+[[tool.uv.index]]
+name = "haut_ai"
+url = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/simple/"
+explicit = true
+
+[[tool.uv.index]]
+name = "haut_ai_publish"
+url = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload/"
+explicit = true
+
+[[tool.uv.index]]
+name = "PyPI"
+url = "https://pypi.org/simple/"
+default = true
 
 [tool.ruff]
 line-length = 120
-
-[[tool.poetry.source]]
-name = "haut_ai"
-url = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/simple/"
-priority = "supplemental"
-
-[[tool.poetry.source]]
-name = "haut_ai_publish"
-url = "https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload/"
-priority = "supplemental"
-
-[[tool.poetry.source]]
-name = "PyPI"
-priority = "primary"
-
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.mypy]
 plugins = [

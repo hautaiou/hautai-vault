@@ -10,29 +10,30 @@ PACKAGE_NAME:=hautai_vault
 help:
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make \033[36m<target>\033[0m\n\nTargets:\n"} /^[a-zA-Z0-9_-]+:.*?##/ { printf "  \033[36m%-10s\033[0m -%s\n", $$1, $$2 }' ${MAKEFILE_LIST}
 
-lint: ## Call to see output from flake8(must be 0 warnings to pass CI}
-	ruff check ./ --fix
+lint: ## Run Ruff linting (CI requires zero warnings)
+	uv run ruff check ./ --fix
 
-format: ## Call to format your code with black and isort
-	ruff check ./ --fix
-	ruff format ./
+format: ## Auto-fix lint issues then apply Ruff formatter
+	uv run ruff check ./ --fix
+	uv run ruff format ./
 
 run_tests: ## Run pytest
-	pytest -svvv --log-cli-level=DEBUG tests/
+	uv run pytest -svvv --log-cli-level=DEBUG tests/
 
 pre_push_test: format lint run_tests analyse_security ## Check code before push
 
-build_wheel: ## CI will call that to build your code
-	poetry build --skip-existing
+build_wheel: ## Build wheel and sdist using uv
+	uv build --wheel --sdist
 
-push_wheel_to_repo: ## Ci will call that to push your code to pypi repo
-	poetry publish --build --skip-existing -r haut_ai_publish -vvv --no-interaction
+push_wheel_to_repo: ## Publish package to Azure DevOps feed via uv
+	uv build --wheel --sdist
+	uv publish --publish-url https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/upload/ --check-url https://pkgs.dev.azure.com/haut-ai/_packaging/haut-ai/pypi/simple/
 
-install_dev_requirements: ## Install dev requirements
-	poetry install --group dev
+install_dev_requirements: ## Install runtime + developer extras
+	uv sync --group dev
 
-install_requirements: ## Install requirements
-	poety install --exclude dev
+install_requirements: ## Install runtime requirements only
+	uv sync --no-group dev
 
-install_all_requirements:  ## Install all requirements
-	poetry install
+install_all_requirements:  ## Install runtime + all optional groups
+	uv sync --group dev
