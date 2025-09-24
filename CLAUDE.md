@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repository. Keep this file the sou
 
 ## Repository Snapshot
 - `hautai_vault/__init__.py`: the full implementation of the Vault client integration (authentication flows, settings source, helper utilities).
-- `tests/`: ready for future automated tests; currently only contains scaffolding.
+- `tests/`: pytest suite validating Vault settings behaviour with stubbed hvac clients (`tests/test_vault.py`).
 - `pyproject.toml`: dependency, linting, and packaging metadata (Poetry, Ruff, MyPy).
 - `Makefile`: convenience targets for formatting, linting, testing, packaging, and publishing.
 - `README.md`: legacy placeholder from the original GitLab template (do not rely on it for accurate instructions).
@@ -61,7 +61,8 @@ settings = Settings()
 The first instantiation pulls secrets from Vault unless disabled or overridden by environment/init values.
 
 ## Testing Notes
-- Unit test coverage is currently minimal (see `tests/test_vault.py`). Tests must mock external Vault access; CI has no Vault instance.
+- Tests mock external Vault access by monkeypatching `hautai_vault.Client` with dummy hvac clients; never attempt live Vault calls in CI.
+- Run locally via `poetry run pytest --cov=hautai_vault --cov-report=term-missing` after installing dependencies.
 - Prefer fast unit tests; integration tests should be gated or skipped by default.
 
 ## When Making Changes
