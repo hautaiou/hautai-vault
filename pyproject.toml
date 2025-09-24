@@ -46,6 +46,135 @@ default = true
 
 [tool.ruff]
 line-length = 120
+target-version = "py311"
+extend-exclude = [
+    ".venv",
+    "helm",
+    "./tests/utils",
+    "./utils",
+    "hautai/saas/utils",
+]
+
+[tool.ruff.lint]
+ignore = [
+    "A002",
+    "A003",
+    "ANN",
+    "PLR0913",
+    "S324",
+    "EXE002",
+    "PLR0911",
+    "N803",
+    "C901",
+    "SLF001",
+    "ARG001",
+    "ARG002",
+    "COM812",
+    "DTZ007",
+    "G004",
+    "E501",
+    "N806",
+    "PLR2004",
+    "RUF100",
+    "S101",
+    "S308",
+    "TC003",
+    "TC002",
+    "RUF012",
+    "COM812",
+    "COM819",
+    "ISC001",
+    "Q000",
+    "Q001",
+    "Q002",
+    "Q003",
+    "W191",
+    "G004",
+    "PLC0415",
+]
+select = [
+    "E",
+    "F",
+    "W",
+    "C90",
+    "I",
+    "N",
+    "UP",
+    "ANN",
+    "S",
+    "BLE",
+    "B",
+    "A",
+    "COM",
+    "C4",
+    "DTZ",
+    "T10",
+    "EM",
+    "EXE",
+    "ISC",
+    "ICN",
+    "G",
+    "INP",
+    "PIE",
+    "T20",
+    "PT",
+    "Q",
+    "RET",
+    "SIM",
+    "TID",
+    "ARG",
+    "PTH",
+    "ERA",
+    "PGH",
+    "PL",
+    "TRY",
+    "RSE",
+    "SLF",
+    "RUF",
+    "G",
+]
+exclude = [
+    "tests/*.py",
+    "tests",
+    "test_*.py",
+    "snippets/*.py",
+    "skingpt_notebook/*.ipynb",
+]
+
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = [
+    "classmethod",
+    "pydantic.validator",
+    "pydantic.root_validator",
+    "root_validator",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]
+"hautai/saas/algorithms/skingpt/skingpt/algorithm.py" = ["PLR0912"]
+"test_*.py" = [
+    "S101",
+    "ANN201",
+    "ARG001",
+    "ANN001",
+    "ANN201",
+    "ANN202",
+    "ANN201",
+]
+"conftest.py" = [
+    "S101",
+    "ANN201",
+    "ARG001",
+    "ANN001",
+    "ANN201",
+    "ANN202",
+    "ANN201",
+]
+"**/scripts/*.py" = ["T201"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-sort-within-sections = true
 
 [tool.mypy]
 plugins = [

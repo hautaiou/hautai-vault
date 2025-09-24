@@ -1,16 +1,16 @@
 import abc
-import shlex
-import subprocess  # noqa: S404
-import typing as ty
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
+import shlex
+import subprocess  # noqa: S404
+import typing as ty
 
-import requests
 from hvac import Client
 from pydantic import BaseModel, Field, SecretStr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -148,7 +148,7 @@ def get_vault_settings() -> VaultSettings:
     global _vault_settings
     if _vault_settings is None:
         _vault_settings = VaultSettings()
-    return _vault_settings  # noqa: R504
+    return _vault_settings  # noqa: RET504
 
 
 class VaultSettingsSource(PydanticBaseSettingsSource):
