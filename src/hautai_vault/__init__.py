@@ -1,16 +1,16 @@
 import abc
-from datetime import datetime
-from functools import cache, cached_property
-from pathlib import Path
 import shutil
 import subprocess  # noqa: S404
 import typing as ty
+from datetime import datetime
+from functools import cache, cached_property
+from pathlib import Path
 
+import requests
 from hvac import Client
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
-import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 
@@ -153,13 +153,28 @@ def register_vault_auth_method(
     _VAULT_AUTH_METHODS[auth_method] = auth_method_class
 
 
-class VaultSettings(BaseSettings):
+class VaultBaseConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        extra="allow",
+        env_file=".env",
+        env_prefix="VAULT_",
+    )
+
+
+class VaultBasicSettings(VaultBaseConfig):
     enabled: bool = True
+
+
+class VaultSettings(VaultBaseConfig):
     url: str
     auth_method: str | None = None
     mount_point: str = "dev"
 
-    model_config = SettingsConfigDict(extra="allow", env_file=".env", env_prefix="VAULT_")
+
+@cache
+def is_vault_enabled() -> bool:
+    """Check if Vault is enabled."""
+    return VaultBasicSettings().enabled
 
 
 @cache
