@@ -34,14 +34,14 @@ Guidance for AI coding agents working in this repository. Keep this file the sou
 ## Core Library Architecture
 - **`VaultBaseSettings`**: Base class that injects `VaultSettingsSource` into Pydantic’s settings pipeline. Subclasses must provide `secret_path` via class definition (`class Settings(VaultBaseSettings, secret_path="my/path"):`).
 - **`VaultSettingsSource`**: Custom Pydantic source that reads secrets from a KV v2 engine. Evaluation order: environment → `.env` → init kwargs → Vault → file secrets.
-- **`VaultSettings`**: Global configuration read once (cached) from environment; controls whether Vault is enabled, URL, auth method, and mount point.
+- **`VaultSettings`**: Global configuration read once (cached via `@functools.cache`) from environment; controls whether Vault is enabled, URL, auth method, and mount point.
 - **`register_vault_auth_method`**: Extension hook for registering new authentication strategies beyond the built-ins.
 - **`PSAccessToken`**: Pydantic model that normalises Azure CLI response fields to snake_case while preserving camelCase attribute access for backwards compatibility—keep the alias map and `__getattr__` bridge intact when editing.
 
 ### Authentication Strategies
 - `jwt` (`JWTAuthMethod`): expects `VAULT_AUTH_JWT_TOKEN`, optional `VAULT_AUTH_JWT_PATH`.
 - `azure` (`AzureAuthMethod`): resolves the absolute `az` executable via `shutil.which` before shelling out to `az account get-access-token`; mount point defaults to `azure` and raises a clear error if the CLI is unavailable.
-- `k8s` (`K8sAuthMethod`): reads a service account token from `VAULT_AUTH_K8S_TOKEN_PATH`, authenticates against the configured mount point.
+- `k8s` (`K8sAuthMethod`): reads a service account token from `VAULT_AUTH_K8S_TOKEN_PATH` (now typed as `pathlib.Path` for better type safety), authenticates against the configured mount point.
 - Token auth fallback: if `VAULT_AUTH_METHOD` unset, `hvac.Client` relies on `VAULT_TOKEN` or `~/.vault-token`.
 
 ### Default Configuration
@@ -62,16 +62,24 @@ settings = Settings()
 The first instantiation pulls secrets from Vault unless disabled or overridden by environment/init values.
 
 ## Testing Notes
-- Tests mock external Vault access by monkeypatching `hautai_vault.Client` with dummy hvac clients; never attempt live Vault calls in CI. `tests/test_vault.py` contains a regression test asserting camelCase access on `PSAccessToken` remains functional.
+- Tests mock external Vault access using `unittest.mock` to patch `hautai_vault.Client` with dummy hvac clients; never attempt live Vault calls in CI. `tests/test_vault.py` contains a regression test asserting camelCase access on `PSAccessToken` remains functional.
+- **Preferred mocking approach**: Use `unittest.mock` with decorators like `@patch.dict(os.environ, {...})` and `@patch("hautai_vault.Client")` rather than pytest monkeypatch for better type safety and standard library consistency.
+- The `get_vault_settings()` function uses `@functools.cache` for performance; tests must call `get_vault_settings.cache_clear()` in fixtures to ensure test isolation.
 - Run locally via `uv run pytest --cov=hautai_vault --cov-report=term-missing` after installing dependencies.
 - Prefer fast unit tests; integration tests should be gated or skipped by default.
 
 ## When Making Changes
-- Follow Ruff auto-fixes, then re-run `make lint` to ensure a clean state.
+- **Always run both**: `make format` (includes lint + format) then `make lint` to ensure a clean state.
 - Update or add tests alongside behavioural changes.
 - Document new environment variables or auth flows here and in `README.md` (when that file is modernised).
 - Avoid committing secrets; rely on Vault for runtime secrets.
 - Ruff has per-file ignores for `tests/test_vault.py` covering `EM101`, `S105`, and `TRY003`; keep them limited to this file unless additional test-only exceptions are justified.
+
+## Code Review Standards
+- **Error message analysis**: When reviewing error messages in tests, verify they reference the correct module/class being mocked (e.g., `hautai_vault.Client` vs `hvac.Client`).
+- **Type safety improvements**: Prefer `pathlib.Path` over `str` for filesystem paths in Pydantic models.
+- **Modern caching**: Use `@functools.cache` instead of manual global variable caching for better performance and cleaner code.
+- **Standard library preference**: Prefer `unittest.mock` over framework-specific mocking when both are available.
 
 ## Troubleshooting
 - Azure auth requires the Azure CLI to be logged in (`az login`).

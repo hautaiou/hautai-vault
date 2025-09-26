@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 import sys
 from types import ModuleType, SimpleNamespace
 import typing as ty
+from unittest.mock import patch
 
 import pytest
 
@@ -40,22 +42,18 @@ class DummyClient:
 
 
 @pytest.fixture(autouse=True)
-def _reset_vault_settings(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("VAULT_ENABLED", raising=False)
-    monkeypatch.delenv("VAULT_AUTH_METHOD", raising=False)
-    monkeypatch.delenv("VAULT_URL", raising=False)
-    monkeypatch.delenv("VAULT_MOUNT_POINT", raising=False)
-    monkeypatch.setattr(hautai_vault, "_vault_settings", None, raising=False)
+def _reset_vault_settings() -> None:
+    # Clear environment variables
+    for var in ["VAULT_ENABLED", "VAULT_AUTH_METHOD", "VAULT_URL", "VAULT_MOUNT_POINT"]:
+        os.environ.pop(var, None)
+    hautai_vault.get_vault_settings.cache_clear()
 
 
-def test_vault_settings_source_reads_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+@patch.dict(os.environ, {"VAULT_ENABLED": "1"})
+@patch("hautai_vault.Client")
+def test_vault_settings_source_reads_secret(mock_client) -> None:
     secret_data = {"API_KEY": "from-vault"}
-
-    def _fake_client(url: str, session: object) -> DummyClient:  # noqa: ARG001
-        return DummyClient(secret_data)
-
-    monkeypatch.setenv("VAULT_ENABLED", "1")
-    monkeypatch.setattr(hautai_vault, "Client", _fake_client)
+    mock_client.return_value = DummyClient(secret_data)
 
     class Settings(hautai_vault.VaultBaseSettings, secret_path="example/path"):
         API_KEY: str
@@ -65,14 +63,13 @@ def test_vault_settings_source_reads_secret(monkeypatch: pytest.MonkeyPatch) -> 
     assert settings.API_KEY == "from-vault"
 
 
-def test_vault_disabled_skips_client(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VAULT_ENABLED", "0")
-    monkeypatch.setenv("API_KEY", "from-env")
-
+@patch.dict(os.environ, {"VAULT_ENABLED": "0", "API_KEY": "from-env"})
+@patch("hautai_vault.Client")
+def test_vault_disabled_skips_client(mock_client) -> None:
     def _should_not_run(*args, **kwargs):  # noqa: ARG001
         raise AssertionError("Vault client must not be constructed when VAULT_ENABLED=0")
 
-    monkeypatch.setattr(hautai_vault, "Client", _should_not_run)
+    mock_client.side_effect = _should_not_run
 
     class Settings(hautai_vault.VaultBaseSettings, secret_path="example/path"):
         API_KEY: str
@@ -82,10 +79,8 @@ def test_vault_disabled_skips_client(monkeypatch: pytest.MonkeyPatch) -> None:
     assert settings.API_KEY == "from-env"
 
 
-def test_unsupported_auth_method_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("VAULT_ENABLED", "1")
-    monkeypatch.setenv("VAULT_AUTH_METHOD", "nonexistent")
-
+@patch.dict(os.environ, {"VAULT_ENABLED": "1", "VAULT_AUTH_METHOD": "nonexistent"})
+def test_unsupported_auth_method_raises() -> None:
     class Settings(hautai_vault.VaultBaseSettings, secret_path="example/path"):
         API_KEY: str
 
@@ -93,7 +88,8 @@ def test_unsupported_auth_method_raises(monkeypatch: pytest.MonkeyPatch) -> None
         Settings()
 
 
-def test_custom_auth_method_used(monkeypatch: pytest.MonkeyPatch) -> None:
+@patch.dict(os.environ, {"VAULT_ENABLED": "1", "VAULT_AUTH_METHOD": "dummy"})
+def test_custom_auth_method_used() -> None:
     secret_data = {"API_KEY": "from-custom-auth"}
     dummy_client = DummyClient(secret_data)
 
@@ -105,14 +101,12 @@ def test_custom_auth_method_used(monkeypatch: pytest.MonkeyPatch) -> None:
             type(self).called += 1
             return dummy_client
 
-    monkeypatch.setenv("VAULT_ENABLED", "1")
-    monkeypatch.setenv("VAULT_AUTH_METHOD", "dummy")
-    monkeypatch.setattr(hautai_vault, "_VAULT_AUTH_METHODS", {"dummy": DummyAuth})
+    with patch.object(hautai_vault, "_VAULT_AUTH_METHODS", {"dummy": DummyAuth}):
 
-    class Settings(hautai_vault.VaultBaseSettings, secret_path="example/path"):
-        API_KEY: str
+        class Settings(hautai_vault.VaultBaseSettings, secret_path="example/path"):
+            API_KEY: str
 
-    settings = Settings()
+        settings = Settings()
 
     assert DummyAuth.called == 1
     assert settings.API_KEY == "from-custom-auth"

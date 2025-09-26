@@ -130,7 +130,6 @@ select = [
     "RSE",
     "SLF",
     "RUF",
-    "G",
 ]
 [tool.ruff.lint.per-file-ignores]
 "tests/test_vault.py" = [

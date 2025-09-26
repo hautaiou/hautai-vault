@@ -1,6 +1,6 @@
 import abc
 from datetime import datetime
-from functools import cached_property
+from functools import cache, cached_property
 from pathlib import Path
 import shutil
 import subprocess  # noqa: S404
@@ -115,8 +115,8 @@ class JWTAuthMethod(AbstractVaultAuthMethod):
 
 
 class K8sAuthMethod(AbstractVaultAuthMethod):
-    token_path: str = Field(
-        default="/var/run/secrets/kubernetes.io/serviceaccount/token",
+    token_path: Path = Field(
+        default=Path("/var/run/secrets/kubernetes.io/serviceaccount/token"),
         description="Filesystem path to the Kubernetes service account token used for Vault auth.",
     )
     mount_point: str
@@ -131,11 +131,10 @@ class K8sAuthMethod(AbstractVaultAuthMethod):
         return client
 
     def _get_token(self) -> str:
-        token_path = Path(self.token_path)
-        if not token_path.exists():
-            msg = f"Kubernetes service account signed jwt at `{token_path}` is not found!"
+        if not self.token_path.exists():
+            msg = f"Kubernetes service account signed jwt at `{self.token_path}` is not found!"
             raise ValueError(msg)
-        return token_path.read_text().strip()
+        return self.token_path.read_text().strip()
 
     model_config = SettingsConfigDict(env_prefix="VAULT_AUTH_K8S_")
 
@@ -163,15 +162,9 @@ class VaultSettings(BaseSettings):
     model_config = SettingsConfigDict(extra="allow", env_file=".env", env_prefix="VAULT_")
 
 
-_vault_settings: VaultSettings | None = None
-
-
+@cache
 def get_vault_settings() -> VaultSettings:
-    settings = globals().get("_vault_settings")
-    if settings is None:
-        settings = VaultSettings()
-        globals()["_vault_settings"] = settings
-    return ty.cast(VaultSettings, settings)
+    return VaultSettings()
 
 
 class VaultSettingsSource(PydanticBaseSettingsSource):
