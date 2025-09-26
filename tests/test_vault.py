@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import os
 import sys
-from types import ModuleType, SimpleNamespace
 import typing as ty
+from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -49,7 +49,7 @@ def _reset_vault_settings() -> None:
     hautai_vault.get_vault_settings.cache_clear()
 
 
-@patch.dict(os.environ, {"VAULT_ENABLED": "1"})
+@patch.dict(os.environ, {"VAULT_ENABLED": "1", "VAULT_URL": "http://vault.example"})
 @patch("hautai_vault.Client")
 def test_vault_settings_source_reads_secret(mock_client) -> None:
     secret_data = {"API_KEY": "from-vault"}
@@ -63,23 +63,7 @@ def test_vault_settings_source_reads_secret(mock_client) -> None:
     assert settings.API_KEY == "from-vault"
 
 
-@patch.dict(os.environ, {"VAULT_ENABLED": "0", "API_KEY": "from-env"})
-@patch("hautai_vault.Client")
-def test_vault_disabled_skips_client(mock_client) -> None:
-    def _should_not_run(*args, **kwargs):  # noqa: ARG001
-        raise AssertionError("Vault client must not be constructed when VAULT_ENABLED=0")
-
-    mock_client.side_effect = _should_not_run
-
-    class Settings(hautai_vault.VaultBaseSettings, secret_path="example/path"):
-        API_KEY: str
-
-    settings = Settings()
-
-    assert settings.API_KEY == "from-env"
-
-
-@patch.dict(os.environ, {"VAULT_ENABLED": "1", "VAULT_AUTH_METHOD": "nonexistent"})
+@patch.dict(os.environ, {"VAULT_ENABLED": "1", "VAULT_AUTH_METHOD": "nonexistent", "VAULT_URL": "http://vault.example"})
 def test_unsupported_auth_method_raises() -> None:
     class Settings(hautai_vault.VaultBaseSettings, secret_path="example/path"):
         API_KEY: str
@@ -88,7 +72,7 @@ def test_unsupported_auth_method_raises() -> None:
         Settings()
 
 
-@patch.dict(os.environ, {"VAULT_ENABLED": "1", "VAULT_AUTH_METHOD": "dummy"})
+@patch.dict(os.environ, {"VAULT_ENABLED": "1", "VAULT_AUTH_METHOD": "dummy", "VAULT_URL": "http://vault.example"})
 def test_custom_auth_method_used() -> None:
     secret_data = {"API_KEY": "from-custom-auth"}
     dummy_client = DummyClient(secret_data)

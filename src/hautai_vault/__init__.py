@@ -185,11 +185,9 @@ def get_vault_settings() -> VaultSettings:
 class VaultSettingsSource(PydanticBaseSettingsSource):
     @cached_property
     def _secrets(self) -> dict[str, ty.Any]:
-        vault_settings = get_vault_settings()
-
-        if not vault_settings.enabled:
+        if not is_vault_enabled():
             return {}
-
+        vault_settings = get_vault_settings()
         auth_method_cls: type[AbstractVaultAuthMethod] | None = None
 
         if vault_settings.auth_method is not None:
