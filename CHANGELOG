@@ -1,5 +1,9 @@
 # Changelog
 
+## `v2.1.1` — [2026-01-13]
+
+- fix typo [[b484a09](https://github.com/hautaiou/hautai-vault/commit/b484a09)]
+
 ## `v2.1.0` — [2026-01-13]
 
 - add override for mount point [[6a01641](https://github.com/hautaiou/hautai-vault/commit/6a01641)]
