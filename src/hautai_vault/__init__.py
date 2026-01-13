@@ -227,7 +227,7 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
 
 class VaultBaseSettings(BaseSettings):
     secret_path: ty.ClassVar[str]
-    mount_point: ty.Classvar[str | None] = None
+    mount_point: ty.ClassVar[str | None] = None
 
     def __init_subclass__(cls, /, secret_path: str, mount_point: str | None = None, **kwargs: ty.Any) -> None:
         super().__init_subclass__(**kwargs)
