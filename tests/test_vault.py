@@ -46,7 +46,6 @@ def _reset_vault_settings() -> None:
     # Clear environment variables
     for var in ["VAULT_ENABLED", "VAULT_AUTH_METHOD", "VAULT_URL", "VAULT_MOUNT_POINT"]:
         os.environ.pop(var, None)
-    hautai_vault.get_vault_settings.cache_clear()
 
 
 @patch.dict(os.environ, {"VAULT_ENABLED": "1", "VAULT_URL": "http://vault.example"})
@@ -111,3 +110,18 @@ def test_ps_access_token_legacy_attribute_access() -> None:
     assert token.accessToken == "token-value"
     assert token.token_type == "Bearer"
     assert token.tokenType == "Bearer"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"vault_url": "http://vault.example"},
+        {"VAULT_URL": "http://vault.example"},
+        {"vault_addr": "http://vault.example"},
+        {"VAULT_ADDR": "http://vault.example"},
+    ],
+)
+def test_vault_settings_url_aliases(payload: dict[str, str]) -> None:
+    settings = hautai_vault.VaultSettings.model_validate(payload)
+
+    assert settings.url == "http://vault.example"

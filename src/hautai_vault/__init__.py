@@ -8,7 +8,7 @@ from pathlib import Path
 
 import requests
 from hvac import Client
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, SecretStr
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 from requests.adapters import HTTPAdapter
@@ -166,7 +166,11 @@ class VaultBasicSettings(VaultBaseConfig):
 
 
 class VaultSettings(VaultBaseConfig):
-    url: str
+    url: str = Field(
+        ...,
+        description="Vault server URL",
+        validation_alias=AliasChoices("vault_url", "VAULT_URL", "vault_addr", "VAULT_ADDR"),
+    )
     auth_method: str | None = None
     mount_point: str = "dev"
 
