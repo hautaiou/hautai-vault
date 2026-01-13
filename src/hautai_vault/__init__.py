@@ -171,13 +171,11 @@ class VaultSettings(VaultBaseConfig):
     mount_point: str = "dev"
 
 
-@cache
 def is_vault_enabled() -> bool:
     """Check if Vault is enabled."""
     return VaultBasicSettings().enabled
 
 
-@cache
 def get_vault_settings() -> VaultSettings:
     return VaultSettings()
 
@@ -206,7 +204,7 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
 
         return client.secrets.kv.v2.read_secret_version(
             self.settings_cls.secret_path,
-            mount_point=vault_settings.mount_point,
+            mount_point=self.settings_cls.mount_point or vault_settings.mount_point,
             raise_on_deleted_version=True,
         )["data"]["data"]
 
@@ -229,10 +227,12 @@ class VaultSettingsSource(PydanticBaseSettingsSource):
 
 class VaultBaseSettings(BaseSettings):
     secret_path: ty.ClassVar[str]
+    mount_point: ty.Classvar[str | None] = None
 
-    def __init_subclass__(cls, /, secret_path: str, **kwargs: ty.Any) -> None:
+    def __init_subclass__(cls, /, secret_path: str, mount_point: str | None = None, **kwargs: ty.Any) -> None:
         super().__init_subclass__(**kwargs)
         cls.secret_path = secret_path
+        cls.mount_point = mount_point
 
     @classmethod
     def settings_customise_sources(
