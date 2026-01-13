@@ -1,6 +1,6 @@
 [project]
 name = "hautai-vault"
-version = "1.0.0"
+version = "2.0.0"
 description = "Library to fetch secrets from HashiCorp Vault to Pydantic settings"
 readme = "README.md"
 authors = [
