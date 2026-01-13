@@ -1,5 +1,9 @@
 # Changelog
 
+## `v2.1.0` — [2026-01-13]
+
+- add override for mount point [[6a01641](https://github.com/hautaiou/hautai-vault/commit/6a01641)]
+
 ## `v2.0.0` — [2026-01-13]
 
 - (no changes since last tag)
