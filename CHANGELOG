@@ -1,5 +1,9 @@
 # Changelog
 
+## `v2.1.2` — [2026-01-13]
+
+- extend aliases for url [[3c3ada4](https://github.com/hautaiou/hautai-vault/commit/3c3ada4)]
+
 ## `v2.1.1` — [2026-01-13]
 
 - fix typo [[b484a09](https://github.com/hautaiou/hautai-vault/commit/b484a09)]
